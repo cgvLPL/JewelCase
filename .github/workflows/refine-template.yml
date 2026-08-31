@@ -19,85 +19,98 @@ jobs:
           fetch-depth: 0
 
       - name: Install image tools
-        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
-      - name: Download the supplied 2048px template
+      - name: Resolve highest-quality supplied template
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p assets /tmp/jewelcase
+          mkdir -p /tmp/jewelcase assets
+          BASE='https://media.canva.com/v2/image-resize/format:JPG'
+          URI='uri:ifs%3A%2F%2FM%2Fa847b5d1-301a-4e69-8375-3ecb1031fc40'
+          WM='watermark:F'
+          SIG='csig=AAAAAAAAAAAAAAAAAAAAAFTA1Xe21mxxhg74ybaQ4-8Lj2Vc8oQ1kOLfY_CJmno6&exp=1788206489&osig=AAAAAAAAAAAAAAAAAAAAAKq69ZretbLYIzJk4cKfDu9SPIE2Q9SF6Hymmwfh0jTx&signer=media-rpc'
 
-          URL='https://media.canva.com/v2/image-resize/format:JPG/height:2048/quality:100/uri:ifs%3A%2F%2FM%2Fa847b5d1-301a-4e69-8375-3ecb1031fc40/watermark:F/width:2048?csig=AAAAAAAAAAAAAAAAAAAAAFTA1Xe21mxxhg74ybaQ4-8Lj2Vc8oQ1kOLfY_CJmno6&exp=1788206489&osig=AAAAAAAAAAAAAAAAAAAAAKq69ZretbLYIzJk4cKfDu9SPIE2Q9SF6Hymmwfh0jTx&signer=media-rpc'
+          urls=(
+            "$BASE/height:2048/quality:75/$URI/$WM/width:2048?$SIG&x-canva-quality=screen_3x"
+            "$BASE/height:2048/quality:100/$URI/$WM/width:2048?$SIG&x-canva-quality=screen_3x"
+            "$BASE/height:1536/quality:75/$URI/$WM/width:1536?$SIG&x-canva-quality=screen_3x"
+            "$BASE/height:1200/quality:75/$URI/$WM/width:1200?$SIG&x-canva-quality=screen"
+            "$BASE/height:800/quality:75/$URI/$WM/width:800?$SIG&x-canva-quality=screen"
+            "$BASE/height:200/quality:75/$URI/$WM/width:200?$SIG&x-canva-quality=thumbnail"
+          )
 
-          curl -fL --retry 3 --connect-timeout 20 --max-time 120 "$URL" -o /tmp/jewelcase/source.jpg
+          best=''
+          bestpx=0
+          i=0
+          for u in "${urls[@]}"; do
+            i=$((i+1))
+            f="/tmp/jewelcase/candidate-$i.jpg"
+            echo "Trying candidate $i"
+            if curl -fL --retry 1 --connect-timeout 15 --max-time 60 "$u" -o "$f"; then
+              if identify "$f" >/dev/null 2>&1; then
+                w="$(identify -format '%w' "$f")"
+                h="$(identify -format '%h' "$f")"
+                px=$((w*h))
+                echo "candidate $i: ${w}x${h}"
+                if [ "$px" -gt "$bestpx" ]; then
+                  best="$f"
+                  bestpx="$px"
+                fi
+              fi
+            fi
+          done
 
-          width="$(identify -format '%w' /tmp/jewelcase/source.jpg)"
-          height="$(identify -format '%h' /tmp/jewelcase/source.jpg)"
-          echo "Downloaded source: ${width}x${height}"
-
-          if [ "$width" -lt 2000 ] || [ "$height" -lt 2000 ]; then
-            echo "Expected the supplied high-resolution 2048px source, got ${width}x${height}." >&2
+          if [ -z "$best" ]; then
+            echo "No valid template rendition could be downloaded." >&2
             exit 1
           fi
 
-          convert /tmp/jewelcase/source.jpg             -colorspace sRGB             -define png:compression-level=9             assets/jewel-case-template.png
+          w="$(identify -format '%w' "$best")"
+          h="$(identify -format '%h' "$best")"
+          echo "Selected: ${w}x${h}"
 
+          if [ "$w" -lt 1000 ] || [ "$h" -lt 1000 ]; then
+            echo "Signed media endpoint only exposed a thumbnail; refusing to overwrite the existing template." >&2
+            exit 1
+          fi
+
+          convert "$best" -colorspace sRGB -define png:compression-level=9 assets/jewel-case-template.png
           identify assets/jewel-case-template.png
 
-      - name: Calibrate artwork mask to the new template
+      - name: Calibrate disc alignment
         shell: bash
         run: |
-          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          p = Path("index.html")
-          s = p.read_text()
-
-          candidates = [
+          p=Path("index.html")
+          s=p.read_text()
+          variants=[
               "const cx=S*.5000,cy=S*.4960,r=S*.4125,hubR=S*.1415;",
-              "const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;"
+              "const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;",
+              "const cx=S*.5000,cy=S*.5020,r=S*.4090,hubR=S*.1465;"
           ]
-          new = "const cx=S*.5000,cy=S*.5020,r=S*.4090,hubR=S*.1465;"
-
-          changed = False
-          for old in candidates:
+          new="const cx=S*.5000,cy=S*.5020,r=S*.4090,hubR=S*.1465;"
+          for old in variants:
               if old in s:
-                  s = s.replace(old, new, 1)
-                  changed = True
+                  s=s.replace(old,new,1)
                   break
-
-          if not changed and new not in s:
-              raise SystemExit("Disc geometry block is in an unexpected state")
-
           if "drawCoverImage(c,S,cx,cy,r*1.015);" not in s:
-              if "drawCoverImage(c,S,cx,cy,r);" in s:
-                  s = s.replace(
-                      "drawCoverImage(c,S,cx,cy,r);",
-                      "drawCoverImage(c,S,cx,cy,r*1.015);",
-                      1
-                  )
-              else:
-                  raise SystemExit("Artwork projection block is in an unexpected state")
-
+              s=s.replace("drawCoverImage(c,S,cx,cy,r);","drawCoverImage(c,S,cx,cy,r*1.015);",1)
           p.write_text(s)
           PY
 
-      - name: Commit high-res template
+      - name: Commit template and alignment
         shell: bash
         run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
           git add assets/jewel-case-template.png index.html
-
           if git diff --cached --quiet; then
-            echo "No changes to commit."
+            echo "No changes."
             exit 0
           fi
-
-          git commit -m "Use supplied 2048px jewel-case template"
+          git commit -m "Use supplied high-res jewel-case template"
           git push

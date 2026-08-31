@@ -40,17 +40,7 @@ jobs:
             f="/tmp/jewelcase/candidate-$i.png"
             echo "Trying candidate $i"
             if curl -fL --retry 2 --connect-timeout 15 --max-time 60 "$u" -o "$f"; then
-              dims=$(python3 - "$f" <<'PY'
-import struct, sys
-p=sys.argv[1]
-d=open(p,'rb').read(24)
-if len(d) >= 24 and d[:8] == b'\x89PNG\r\n\x1a\n':
-    w,h=struct.unpack(">II",d[16:24])
-    print(f"{w} {h}")
-else:
-    print("0 0")
-PY
-)
+              dims=$(python3 -c 'import struct,sys; d=open(sys.argv[1],"rb").read(24); print("%d %d"%struct.unpack(">II",d[16:24]) if len(d)>=24 and d[:8]==b"\x89PNG\r\n\x1a\n" else "0 0")' "$f")
               w=$(echo "$dims" | awk '{print $1}')
               h=$(echo "$dims" | awk '{print $2}')
               px=$((w*h))

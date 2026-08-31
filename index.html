@@ -153,7 +153,7 @@
       <div class="section-title">Photo</div>
       <div class="control">
         <div class="control-head"><label for="zoom">Zoom</label><span class="value" id="zoomVal"></span></div>
-        <input id="zoom" type="range" min="0.6" max="2.8" value="1.1" step="0.01">
+        <input id="zoom" type="range" min="0.6" max="2.8" value="1.05" step="0.01">
       </div>
       <div class="control">
         <div class="control-head"><label for="rotation">Rotation</label><span class="value" id="rotationVal"></span></div>
@@ -161,11 +161,11 @@
       </div>
       <div class="control">
         <div class="control-head"><label for="brightness">Brightness</label><span class="value" id="brightnessVal"></span></div>
-        <input id="brightness" type="range" min="55" max="145" value="92" step="1">
+        <input id="brightness" type="range" min="55" max="145" value="100" step="1">
       </div>
       <div class="control">
         <div class="control-head"><label for="contrast">Contrast</label><span class="value" id="contrastVal"></span></div>
-        <input id="contrast" type="range" min="70" max="160" value="115" step="1">
+        <input id="contrast" type="range" min="70" max="160" value="108" step="1">
       </div>
       <div class="control">
         <div class="control-head"><label for="saturation">Saturation</label><span class="value" id="saturationVal"></span></div>
@@ -173,7 +173,7 @@
       </div>
       <div class="control">
         <div class="control-head"><label for="motion">Spin blur</label><span class="value" id="motionVal"></span></div>
-        <input id="motion" type="range" min="0" max="18" value="4" step="1">
+        <input id="motion" type="range" min="0" max="18" value="2" step="1">
       </div>
     </section>
 
@@ -184,7 +184,7 @@
           <label class="control-head" for="discStyle">Finish</label>
           <select id="discStyle">
             <option value="purple">Purple tint</option>
-            <option value="clear">Clear</option>
+            <option value="clear" selected>Clear</option>
             <option value="smoke">Smoke</option>
             <option value="black">Black</option>
             <option value="pink">Pink tint</option>
@@ -194,23 +194,23 @@
         <div>
           <label class="control-head" for="caseStyle">Case</label>
           <select id="caseStyle">
-            <option value="clear">Crystal clear</option>
-            <option value="worn">Worn plastic</option>
-            <option value="clean">Minimal</option>
+            <option value="template">Supplied template</option>
+            <option value="worn">Extra worn</option>
+            <option value="clean">Cleaner finish</option>
           </select>
         </div>
       </div>
       <div class="control">
         <div class="control-head"><label for="discOpacity">Disc tint</label><span class="value" id="discOpacityVal"></span></div>
-        <input id="discOpacity" type="range" min="0" max="75" value="24" step="1">
+        <input id="discOpacity" type="range" min="0" max="75" value="10" step="1">
       </div>
       <div class="control">
         <div class="control-head"><label for="glare">Glare</label><span class="value" id="glareVal"></span></div>
-        <input id="glare" type="range" min="0" max="100" value="55" step="1">
+        <input id="glare" type="range" min="0" max="100" value="48" step="1">
       </div>
       <div class="control">
         <div class="control-head"><label for="grain">Grain / dust</label><span class="value" id="grainVal"></span></div>
-        <input id="grain" type="range" min="0" max="100" value="30" step="1">
+        <input id="grain" type="range" min="0" max="100" value="12" step="1">
       </div>
       <div class="toggle-row"><span>Disc grooves</span><label class="switch"><input id="grooves" type="checkbox" checked><span class="slider"></span></label></div>
       <div class="toggle-row"><span>Plastic scratches</span><label class="switch"><input id="scratches" type="checkbox" checked><span class="slider"></span></label></div>
@@ -251,9 +251,13 @@
   const $ = id => document.getElementById(id);
   const canvas = $('preview');
   const ctx = canvas.getContext('2d');
+  const templateImage = new Image();
+  templateImage.decoding = 'async';
+  templateImage.src = 'assets/jewel-case-template.png';
+  templateImage.onload = () => requestRender();
   const state = {
-    image:null, zoom:1.1, rotation:0, brightness:92, contrast:115, saturation:100, motion:4,
-    discStyle:'purple', caseStyle:'clear', discOpacity:24, glare:55, grain:30,
+    image:null, zoom:1.05, rotation:0, brightness:100, contrast:108, saturation:100, motion:2,
+    discStyle:'clear', caseStyle:'template', discOpacity:10, glare:48, grain:12,
     grooves:true, scratches:true, titleSticker:false, advisory:false, priceSticker:false, barcode:false,
     albumTitle:'', artistName:'', x:0, y:0
   };
@@ -307,7 +311,8 @@
       c.filter=`brightness(${state.brightness}%) contrast(${state.contrast}%) saturate(${state.saturation}%)`;
       if(state.motion>0){
         const steps=Math.min(10,2+Math.ceil(state.motion/2));
-        c.globalAlpha=1/Math.max(1,steps*.64);
+        const inheritedAlpha=c.globalAlpha;
+        c.globalAlpha=inheritedAlpha/Math.max(1,steps*.64);
         for(let i=0;i<steps;i++){
           c.save();
           const t=(i/(steps-1||1)-.5)*(state.motion*.0048);
@@ -315,7 +320,7 @@
           c.drawImage(im,-w/2,-h/2,w,h);
           c.restore();
         }
-        c.globalAlpha=1;
+        c.globalAlpha=inheritedAlpha;
       } else c.drawImage(im,-w/2,-h/2,w,h);
       c.filter='none';
     } else {
@@ -331,56 +336,82 @@
     c.restore();
   }
 
+  function drawTemplateBase(c,S){
+    c.fillStyle='#020203';c.fillRect(0,0,S,S);
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.imageSmoothingEnabled=true;
+      c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
+    } else {
+      const bg=c.createRadialGradient(S*.5,S*.49,S*.12,S*.5,S*.49,S*.72);
+      bg.addColorStop(0,'#303035');bg.addColorStop(.55,'#111114');bg.addColorStop(1,'#020203');
+      c.fillStyle=bg;c.fillRect(0,0,S,S);
+    }
+  }
+
   function drawDisc(c,S){
-    const cx=S*.505,cy=S*.505,r=S*.405;
-    drawCoverImage(c,S,cx,cy,r);
+    // Geometry is calibrated to the supplied empty jewel-case photograph.
+    const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;
 
-    c.save();circlePath(c,cx,cy,r);c.clip();
-    const rgb=discColors[state.discStyle]||discColors.purple;
-    const alpha=(state.discOpacity/100)*(state.discStyle==='clear'?.5:1);
-    c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;c.fillRect(cx-r,cy-r,r*2,r*2);
+    if(state.image){
+      c.save();
+      c.beginPath();
+      c.arc(cx,cy,r,0,Math.PI*2);
+      c.arc(cx,cy,hubR,0,Math.PI*2,true);
+      c.clip('evenodd');
 
-    if(state.discStyle==='iridescent'){
-      const rainbow=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
-      rainbow.addColorStop(0,'rgba(255,80,150,.12)');rainbow.addColorStop(.35,'rgba(90,130,255,.08)');
-      rainbow.addColorStop(.7,'rgba(100,255,200,.1)');rainbow.addColorStop(1,'rgba(255,220,90,.09)');
-      c.fillStyle=rainbow;c.fillRect(cx-r,cy-r,r*2,r*2);
+      // Overlay blending lets the real photographed disc keep its physical
+      // highlights, shadows, scratches and translucent plastic while the
+      // uploaded artwork appears printed into the disc surface.
+      c.globalCompositeOperation='overlay';
+      c.globalAlpha=.98;
+      drawCoverImage(c,S,cx,cy,r);
+      c.restore();
     }
-    if(state.grooves){
-      c.lineWidth=Math.max(1,S*.00065);
-      for(let rr=r*.48;rr<r*.98;rr+=S*.008){
-        c.strokeStyle=`rgba(255,255,255,${.015+(rr%17)/2400})`;circlePath(c,cx,cy,rr);c.stroke();
+
+    // Optional color finish lives below the photographed specular layer.
+    const rgb=discColors[state.discStyle]||discColors.clear;
+    const alpha=(state.discOpacity/100)*(state.discStyle==='clear'?.32:1);
+    if(alpha>0){
+      c.save();
+      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubR,0,Math.PI*2,true);c.clip('evenodd');
+      c.globalCompositeOperation=state.discStyle==='black'?'multiply':'soft-light';
+      c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
+      c.fillRect(cx-r,cy-r,r*2,r*2);
+      if(state.discStyle==='iridescent'){
+        const rainbow=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+        rainbow.addColorStop(0,'rgba(255,70,150,.22)');
+        rainbow.addColorStop(.32,'rgba(80,120,255,.16)');
+        rainbow.addColorStop(.67,'rgba(80,255,205,.16)');
+        rainbow.addColorStop(1,'rgba(255,215,85,.18)');
+        c.fillStyle=rainbow;c.fillRect(cx-r,cy-r,r*2,r*2);
       }
+      c.restore();
     }
-    const glare=state.glare/100;
-    if(glare>0){
-      const g=c.createLinearGradient(cx-r*.8,cy-r,cx+r*.75,cy+r);
-      g.addColorStop(0,'rgba(255,255,255,0)');
-      g.addColorStop(.35,`rgba(255,255,255,${.06*glare})`);
-      g.addColorStop(.44,`rgba(255,255,255,${.22*glare})`);
-      g.addColorStop(.52,'rgba(255,255,255,0)');
-      c.fillStyle=g;c.fillRect(cx-r,cy-r,r*2,r*2);
-      const rg=c.createRadialGradient(cx-r*.34,cy-r*.39,0,cx-r*.34,cy-r*.39,r*.65);
-      rg.addColorStop(0,`rgba(170,160,255,${.13*glare})`);rg.addColorStop(.4,'rgba(120,100,255,.02)');rg.addColorStop(1,'rgba(0,0,0,0)');
-      c.fillStyle=rg;c.fillRect(cx-r,cy-r,r*2,r*2);
+
+    if(state.grooves){
+      c.save();
+      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubR,0,Math.PI*2,true);c.clip('evenodd');
+      c.lineWidth=Math.max(.65,S*.00045);
+      for(let rr=hubR*1.12;rr<r*.985;rr+=S*.0075){
+        c.strokeStyle=`rgba(255,255,255,${.009+(rr%19)/3600})`;
+        circlePath(c,cx,cy,rr);c.stroke();
+      }
+      c.restore();
     }
-    c.restore();
 
-    c.strokeStyle='rgba(235,240,248,.68)';c.lineWidth=S*.004;circlePath(c,cx,cy,r);c.stroke();
-    c.strokeStyle='rgba(0,0,0,.7)';c.lineWidth=S*.003;circlePath(c,cx,cy,r-S*.009);c.stroke();
-
-    // hub / clear inner ring
-    const hubR=S*.124, holeR=S*.064;
-    const hubG=c.createRadialGradient(cx,cy,holeR,cx,cy,hubR);
-    hubG.addColorStop(0,'rgba(6,6,8,.98)');hubG.addColorStop(.48,'rgba(8,8,11,.96)');
-    hubG.addColorStop(.5,'rgba(210,220,230,.38)');hubG.addColorStop(.57,'rgba(40,42,49,.8)');hubG.addColorStop(1,'rgba(230,240,248,.12)');
-    c.fillStyle=hubG;circlePath(c,cx,cy,hubR);c.fill();
-    c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=S*.002;circlePath(c,cx,cy,hubR);c.stroke();
-    c.fillStyle='#050506';circlePath(c,cx,cy,holeR);c.fill();
-    c.strokeStyle='rgba(210,220,230,.5)';c.lineWidth=S*.003;circlePath(c,cx,cy,holeR);c.stroke();
-    for(let i=0;i<4;i++){
-      const a=i*Math.PI/2+.62, rr=hubR*.68, x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
-      c.fillStyle='#060608';circlePath(c,x,y,S*.012);c.fill();c.strokeStyle='rgba(255,255,255,.28)';c.lineWidth=S*.0014;c.stroke();
+    // Re-project the supplied photograph as the final specular/plastic layer.
+    // Screen mode makes the black background disappear while retaining the
+    // real case rails, disc reflections, dust and acrylic highlights.
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.globalCompositeOperation='screen';
+      c.globalAlpha=.18+(state.glare/100)*.42;
+      c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
     }
   }
 
@@ -389,54 +420,23 @@
   }
 
   function drawCase(c,S){
-    const pad=S*.018;
-    // shadow
-    c.save();c.shadowColor='rgba(0,0,0,.85)';c.shadowBlur=S*.03;c.shadowOffsetY=S*.012;
-    c.fillStyle='rgba(255,255,255,.035)';roundedRectPath(c,pad,pad,S-pad*2,S-pad*2,S*.026);c.fill();c.restore();
-
-    if(state.caseStyle!=='clean'){
-      // outer rails
-      const layers=[
-        [pad,'rgba(236,248,255,.72)',S*.004],
-        [pad+S*.008,'rgba(255,255,255,.28)',S*.002],
-        [pad+S*.016,'rgba(120,140,150,.38)',S*.003]
-      ];
-      layers.forEach(([p,col,w])=>{c.strokeStyle=col;c.lineWidth=w;roundedRectPath(c,p,p,S-p*2,S-p*2,S*.024);c.stroke();});
-      // top/bottom latch ribs
-      c.strokeStyle='rgba(240,250,255,.44)';c.lineWidth=S*.002;
-      for(let i=0;i<13;i++){
-        let x=S*(.04+i*.071);c.beginPath();c.moveTo(x,S*.022);c.lineTo(x+S*.006,S*.063);c.stroke();
-        c.beginPath();c.moveTo(x,S*.978);c.lineTo(x+S*.005,S*.936);c.stroke();
-      }
-      // left hinge
-      const hg=c.createLinearGradient(S*.015,0,S*.14,0);hg.addColorStop(0,'rgba(245,250,255,.2)');hg.addColorStop(.55,'rgba(245,250,255,.52)');hg.addColorStop(1,'rgba(110,125,135,.18)');
-      c.fillStyle=hg;roundedRectPath(c,S*.018,S*.32,S*.105,S*.36,S*.018);c.fill();
-      c.strokeStyle='rgba(240,250,255,.48)';c.lineWidth=S*.003;roundedRectPath(c,S*.018,S*.32,S*.105,S*.36,S*.018);c.stroke();
-      c.fillStyle='rgba(9,9,11,.25)';roundedRectPath(c,S*.018,S*.41,S*.065,S*.18,S*.012);c.fill();
-      // right rails
-      c.fillStyle='rgba(240,250,255,.16)';c.fillRect(S*.958,S*.11,S*.018,S*.78);
-      c.strokeStyle='rgba(255,255,255,.48)';c.lineWidth=S*.002;c.beginPath();c.moveTo(S*.97,S*.12);c.lineTo(S*.97,S*.88);c.stroke();
-    }
-
-    // plastic face reflection
-    const glare=state.glare/100;
-    if(glare>0){
-      const pg=c.createLinearGradient(0,0,S,S);
-      pg.addColorStop(0,`rgba(255,255,255,${.12*glare})`);
-      pg.addColorStop(.16,'rgba(255,255,255,0)');
-      pg.addColorStop(.72,'rgba(255,255,255,0)');
-      pg.addColorStop(1,`rgba(255,255,255,${.055*glare})`);
-      c.fillStyle=pg;roundedRectPath(c,pad,pad,S-pad*2,S-pad*2,S*.026);c.fill();
-    }
-
-    if(state.scratches && state.caseStyle!=='clean'){
+    // The physical jewel case now comes from the supplied photographic template.
+    // These controls only add optional aging on top; they no longer redraw it.
+    if(state.caseStyle==='worn' && state.scratches){
       c.save();c.lineCap='round';
-      const amount=Math.round(12+state.grain*.28);
+      const amount=Math.round(18+state.grain*.35);
       for(let i=0;i<amount;i++){
-        const x=seeded(i+2)*S,y=seeded(i+55)*S,len=(.02+seeded(i+9)*.11)*S,ang=(-.9+seeded(i+91)*1.8);
-        c.strokeStyle=`rgba(255,255,255,${.025+seeded(i+7)*.06})`;c.lineWidth=Math.max(.7,S*.0008);
+        const x=seeded(i+2)*S,y=seeded(i+55)*S,len=(.025+seeded(i+9)*.12)*S,ang=(-.9+seeded(i+91)*1.8);
+        c.strokeStyle=`rgba(255,255,255,${.025+seeded(i+7)*.07})`;
+        c.lineWidth=Math.max(.7,S*.00075);
         c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);c.stroke();
       }
+      c.restore();
+    } else if(state.caseStyle==='clean'){
+      c.save();
+      c.globalCompositeOperation='soft-light';
+      c.fillStyle='rgba(255,255,255,.045)';
+      c.fillRect(0,0,S,S);
       c.restore();
     }
   }
@@ -493,12 +493,8 @@
   function render(target=canvas,size=900){
     target.width=size;target.height=size;
     const c=target.getContext('2d'),S=size;
-    c.clearRect(0,0,S,S);c.fillStyle='#050506';c.fillRect(0,0,S,S);
-
-    // subtle background outside disc
-    const bg=c.createRadialGradient(S*.5,S*.48,S*.12,S*.5,S*.48,S*.75);
-    bg.addColorStop(0,'#15151a');bg.addColorStop(1,'#030304');c.fillStyle=bg;c.fillRect(0,0,S,S);
-
+    c.clearRect(0,0,S,S);
+    drawTemplateBase(c,S);
     drawDisc(c,S);
     drawCase(c,S);
     drawNoise(c,S);
@@ -507,8 +503,7 @@
     if(state.advisory)drawAdvisory(c,S);
     if(state.barcode)drawBarcode(c,S);
 
-    // final crisp inner case lip
-    c.strokeStyle='rgba(255,255,255,.22)';c.lineWidth=S*.0015;roundedRectPath(c,S*.035,S*.035,S*.93,S*.93,S*.02);c.stroke();
+    // Physical rails, hinge and inner lip are preserved from the supplied template.
   }
 
   let raf=0;
@@ -551,10 +546,10 @@
   canvas.addEventListener('dblclick',()=>{state.x=0;state.y=0;requestRender()});
 
   const presets={
-    night:{discStyle:'purple',caseStyle:'clear',discOpacity:28,glare:62,grain:34,motion:7,brightness:88,contrast:122,saturation:105},
-    clear:{discStyle:'clear',caseStyle:'clean',discOpacity:12,glare:68,grain:12,motion:0,brightness:100,contrast:105,saturation:100},
-    smoke:{discStyle:'smoke',caseStyle:'worn',discOpacity:38,glare:35,grain:58,motion:3,brightness:78,contrast:136,saturation:82},
-    bubblegum:{discStyle:'pink',caseStyle:'clear',discOpacity:26,glare:76,grain:22,motion:2,brightness:102,contrast:112,saturation:118}
+    night:{discStyle:'purple',caseStyle:'template',discOpacity:22,glare:56,grain:16,motion:6,brightness:90,contrast:118,saturation:106},
+    clear:{discStyle:'clear',caseStyle:'clean',discOpacity:4,glare:58,grain:6,motion:0,brightness:102,contrast:104,saturation:100},
+    smoke:{discStyle:'smoke',caseStyle:'worn',discOpacity:30,glare:38,grain:38,motion:3,brightness:82,contrast:128,saturation:84},
+    bubblegum:{discStyle:'pink',caseStyle:'template',discOpacity:20,glare:64,grain:12,motion:2,brightness:104,contrast:110,saturation:116}
   };
   document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click',()=>{
     const p=presets[btn.dataset.preset];Object.assign(state,p);
@@ -563,7 +558,7 @@
   }));
 
   function reset(){
-    Object.assign(state,{zoom:1.1,rotation:0,brightness:92,contrast:115,saturation:100,motion:4,discStyle:'purple',caseStyle:'clear',discOpacity:24,glare:55,grain:30,grooves:true,scratches:true,titleSticker:false,advisory:false,priceSticker:false,barcode:false,albumTitle:'',artistName:'',x:0,y:0});
+    Object.assign(state,{zoom:1.05,rotation:0,brightness:100,contrast:108,saturation:100,motion:2,discStyle:'clear',caseStyle:'template',discOpacity:10,glare:48,grain:12,grooves:true,scratches:true,titleSticker:false,advisory:false,priceSticker:false,barcode:false,albumTitle:'',artistName:'',x:0,y:0});
     controls.forEach(id=>{const el=$(id); if(el.type==='checkbox')el.checked=state[id];else el.value=state[id]});
     syncState();requestRender();toast('Controls reset');
   }

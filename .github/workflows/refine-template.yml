@@ -29,9 +29,26 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/jewelcase assets
 
-          VIEW_URL='https://www.canva.com/d/RUhj26YzeoBg98m'
-          curl -fL --retry 3 --connect-timeout 20 --max-time 120 \
-            -A 'Mozilla/5.0' "$VIEW_URL" -o /tmp/jewelcase/page.html
+          page_ok=0
+          for VIEW_URL in \
+            'https://www.canva.com/design/DAHT3wUaJmA/view?embed=true' \
+            'https://www.canva.com/design/DAHT3wUaJmA/view?embed' \
+            'https://www.canva.com/design/DAHT3wUaJmA/view' \
+            'https://www.canva.com/d/RUhj26YzeoBg98m'
+          do
+            echo "Trying Canva design page: $VIEW_URL"
+            if curl -fL --retry 2 --connect-timeout 20 --max-time 120 \
+                -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36' \
+                -H 'Accept: text/html,application/xhtml+xml' \
+                "$VIEW_URL" -o /tmp/jewelcase/page.html; then
+              page_ok=1
+              break
+            fi
+          done
+          if [ "$page_ok" -ne 1 ]; then
+            echo "Canva transfer design page could not be fetched." >&2
+            exit 1
+          fi
 
           python3 - <<'PY' > /tmp/jewelcase/candidates.txt
           from html.parser import HTMLParser

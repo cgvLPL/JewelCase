@@ -1,4 +1,4 @@
-name: Refine full-size template and disc alignment
+name: Import high-res jewel-case template
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  refine:
+  import-template:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,25 +24,30 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y imagemagick
 
-      - name: Build full-size template asset
+      - name: Download the supplied 2048px template
         shell: bash
         run: |
           set -euo pipefail
-          test -f assets/jewel-case-template.png
-          mkdir -p /tmp/jewelcase
+          mkdir -p assets /tmp/jewelcase
+
+          URL='https://media.canva.com/v2/image-resize/format:JPG/height:2048/quality:100/uri:ifs%3A%2F%2FM%2Fa847b5d1-301a-4e69-8375-3ecb1031fc40/watermark:F/width:2048?csig=AAAAAAAAAAAAAAAAAAAAAFTA1Xe21mxxhg74ybaQ4-8Lj2Vc8oQ1kOLfY_CJmno6&exp=1788206489&osig=AAAAAAAAAAAAAAAAAAAAAKq69ZretbLYIzJk4cKfDu9SPIE2Q9SF6Hymmwfh0jTx&signer=media-rpc'
+
+          curl -fL --retry 3 --connect-timeout 20 --max-time 120 "$URL" -o /tmp/jewelcase/source.jpg
+
+          width="$(identify -format '%w' /tmp/jewelcase/source.jpg)"
+          height="$(identify -format '%h' /tmp/jewelcase/source.jpg)"
+          echo "Downloaded source: ${width}x${height}"
+
+          if [ "$width" -lt 2000 ] || [ "$height" -lt 2000 ]; then
+            echo "Expected the supplied high-resolution 2048px source, got ${width}x${height}." >&2
+            exit 1
+          fi
+
+          convert /tmp/jewelcase/source.jpg             -colorspace sRGB             -define png:compression-level=9             assets/jewel-case-template.png
 
           identify assets/jewel-case-template.png
 
-          # Rebuild the stored template as a large export-ready source. The
-          # repository currently contains a small rendition, so use high-quality
-          # Lanczos resampling plus restrained sharpening instead of browser
-          # interpolation at export time.
-          convert assets/jewel-case-template.png             -filter Lanczos             -resize 2048x2048!             -unsharp 0x0.85+0.75+0.008             -define png:compression-level=9             /tmp/jewelcase/template-2048.png
-
-          mv /tmp/jewelcase/template-2048.png assets/jewel-case-template.png
-          identify assets/jewel-case-template.png
-
-      - name: Tighten disc and hub alignment
+      - name: Calibrate artwork mask to the new template
         shell: bash
         run: |
           set -euo pipefail
@@ -51,35 +56,48 @@ jobs:
           p = Path("index.html")
           s = p.read_text()
 
-          old = "const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;"
-          new = "const cx=S*.5000,cy=S*.4960,r=S*.4125,hubR=S*.1415;"
-          if old in s:
-              s = s.replace(old, new, 1)
-          elif new not in s:
+          candidates = [
+              "const cx=S*.5000,cy=S*.4960,r=S*.4125,hubR=S*.1415;",
+              "const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;"
+          ]
+          new = "const cx=S*.5000,cy=S*.5020,r=S*.4090,hubR=S*.1465;"
+
+          changed = False
+          for old in candidates:
+              if old in s:
+                  s = s.replace(old, new, 1)
+                  changed = True
+                  break
+
+          if not changed and new not in s:
               raise SystemExit("Disc geometry block is in an unexpected state")
 
-          # Give the printed image a very small bleed under the photographed
-          # outer disc edge so no dark seam appears after rotation/zoom.
-          old2 = "drawCoverImage(c,S,cx,cy,r);"
-          new2 = "drawCoverImage(c,S,cx,cy,r*1.015);"
-          if old2 in s:
-              s = s.replace(old2, new2, 1)
-          elif new2 not in s:
-              raise SystemExit("Disc artwork projection is in an unexpected state")
+          if "drawCoverImage(c,S,cx,cy,r*1.015);" not in s:
+              if "drawCoverImage(c,S,cx,cy,r);" in s:
+                  s = s.replace(
+                      "drawCoverImage(c,S,cx,cy,r);",
+                      "drawCoverImage(c,S,cx,cy,r*1.015);",
+                      1
+                  )
+              else:
+                  raise SystemExit("Artwork projection block is in an unexpected state")
 
           p.write_text(s)
           PY
 
-      - name: Commit refined renderer
+      - name: Commit high-res template
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add assets/jewel-case-template.png index.html
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
           fi
-          git commit -m "Refine full-size template and disc alignment"
+
+          git commit -m "Use supplied 2048px jewel-case template"
           git push

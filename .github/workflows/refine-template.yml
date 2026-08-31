@@ -53,17 +53,19 @@ jobs:
 
           old = "const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;"
           new = "const cx=S*.5000,cy=S*.4960,r=S*.4125,hubR=S*.1415;"
-          if old not in s:
-              raise SystemExit("Expected disc geometry block was not found")
-          s = s.replace(old, new, 1)
+          if old in s:
+              s = s.replace(old, new, 1)
+          elif new not in s:
+              raise SystemExit("Disc geometry block is in an unexpected state")
 
           # Give the printed image a very small bleed under the photographed
           # outer disc edge so no dark seam appears after rotation/zoom.
           old2 = "drawCoverImage(c,S,cx,cy,r);"
           new2 = "drawCoverImage(c,S,cx,cy,r*1.015);"
-          if old2 not in s:
-              raise SystemExit("Expected disc artwork projection was not found")
-          s = s.replace(old2, new2, 1)
+          if old2 in s:
+              s = s.replace(old2, new2, 1)
+          elif new2 not in s:
+              raise SystemExit("Disc artwork projection is in an unexpected state")
 
           p.write_text(s)
           PY

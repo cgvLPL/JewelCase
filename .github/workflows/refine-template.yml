@@ -18,6 +18,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install image tools
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
       - name: Build full-size template asset
         shell: bash
         run: |

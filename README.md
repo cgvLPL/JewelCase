@@ -5,7 +5,8 @@ Turn any photo into Y2K-inspired jewel-case / CD artwork directly in the browser
 ## Features
 
 - Drag-and-drop photo upload
-- Circular CD crop with realistic center hub
+- Supplied photorealistic jewel-case template used as the physical case/disc base
+- Photo compositing calibrated to the template's disc and hub geometry
 - Clear, purple, smoke, black, pink, and iridescent disc finishes
 - Spin/motion blur simulation
 - Brightness, contrast, saturation, zoom, rotation, and drag positioning
@@ -39,7 +40,7 @@ Expected site URL:
 
 ## How it works
 
-JewelCase uses the browser Canvas 2D API. The original image is masked to a disc, transformed and color-graded, then combined with procedural reflections, grooves, a spindle hub, case geometry, scratches, grain, and optional labels. Export is rendered again at the selected full resolution rather than upscaling the preview.
+JewelCase uses the browser Canvas 2D API. The supplied photographed empty jewel case provides the real acrylic rails, hinge, disc reflections, hub, scratches, dust, and material response. Uploaded artwork is masked into the disc and composited with blend modes so those photographed details remain visible, then optional tint, grooves, aging, and labels are added. Export is rendered again at the selected full resolution rather than simply scaling the preview.
 
 ## Privacy
 

@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#09090b" />
+  <meta name="description" content="Turn any photo into Y2K jewel-case CD artwork in your browser." />
+  <title>JewelCase — Photo to CD Artwork</title>
+  <style>
+    :root{
+      --bg:#09090b;--panel:#111114;--panel2:#17171b;--line:#2a2a30;--muted:#93939f;
+      --text:#f4f4f5;--accent:#b9ff4a;--accent2:#7c5cff;--danger:#ff6b6b;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{
+      background:
+        radial-gradient(circle at 15% 0%,rgba(124,92,255,.16),transparent 28rem),
+        radial-gradient(circle at 95% 20%,rgba(185,255,74,.07),transparent 26rem),
+        #09090b;
+    }
+    button,input,select{font:inherit}
+    button{color:inherit}
+    .app{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) 360px}
+    .workspace{min-width:0;display:flex;flex-direction:column}
+    header{
+      height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+      border-bottom:1px solid rgba(255,255,255,.08);background:rgba(9,9,11,.72);backdrop-filter:blur(18px);
+      position:sticky;top:0;z-index:10
+    }
+    .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:-.03em}
+    .brandmark{width:34px;height:34px;border:1px solid #444;border-radius:50%;position:relative;background:radial-gradient(circle at 35% 30%,#777 0 3%,#16161b 28%,#050506 50%,#292930 53%,#0b0b0d 68%,#555 70%,#111 73%)}
+    .brandmark:after{content:"";position:absolute;inset:11px;border:1px solid #777;border-radius:50%;background:#09090b}
+    .brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-top:2px}
+    .top-actions{display:flex;gap:8px}
+    .btn{
+      border:1px solid var(--line);background:var(--panel2);border-radius:11px;padding:9px 12px;font-weight:700;font-size:13px;
+      cursor:pointer;transition:.18s transform,.18s border-color,.18s background
+    }
+    .btn:hover{transform:translateY(-1px);border-color:#4a4a53}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#10130b}
+    .stage-wrap{flex:1;display:grid;place-items:center;padding:32px;overflow:auto}
+    .stage-shell{width:min(78vh,820px);max-width:100%;position:relative}
+    .stage-shell:before{content:"";display:block;padding-top:100%}
+    canvas{
+      position:absolute;inset:0;width:100%;height:100%;display:block;background:#050506;border-radius:6px;
+      box-shadow:0 28px 80px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.05);
+      touch-action:none;cursor:grab
+    }
+    canvas.dragging{cursor:grabbing}
+    .hint{margin-top:12px;text-align:center;color:var(--muted);font-size:12px}
+    aside{
+      border-left:1px solid rgba(255,255,255,.08);background:rgba(15,15,18,.88);backdrop-filter:blur(18px);
+      height:100vh;position:sticky;top:0;overflow:auto
+    }
+    .side-head{padding:20px;border-bottom:1px solid var(--line)}
+    .side-head h1{margin:0 0 5px;font-size:18px;letter-spacing:-.03em}
+    .side-head p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+    .section{padding:17px 18px;border-bottom:1px solid var(--line)}
+    .section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#b8b8c2;margin:0 0 13px}
+    .upload{
+      border:1px dashed #45454f;border-radius:14px;padding:16px;text-align:center;background:#0d0d10;cursor:pointer;
+      transition:.18s border-color,.18s background
+    }
+    .upload:hover,.upload.over{border-color:var(--accent);background:#11140d}
+    .upload strong{display:block;font-size:13px;margin-bottom:4px}
+    .upload span{font-size:11px;color:var(--muted)}
+    .upload input{display:none}
+    .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+    .preset{
+      padding:10px;border:1px solid var(--line);border-radius:12px;background:#121216;text-align:left;cursor:pointer;
+      font-size:12px;font-weight:750
+    }
+    .preset span{display:block;color:var(--muted);font-size:10px;font-weight:600;margin-top:2px}
+    .control{margin:12px 0}
+    .control:first-child{margin-top:0}
+    .control-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:12px}
+    .value{font-variant-numeric:tabular-nums;color:var(--muted);font-size:11px}
+    input[type="range"]{width:100%;accent-color:var(--accent)}
+    select,.text-input{
+      width:100%;background:#101013;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:9px 10px;outline:none;font-size:12px
+    }
+    select:focus,.text-input:focus{border-color:#5d5d6a}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;margin:10px 0}
+    .switch{position:relative;width:38px;height:22px;flex:0 0 auto}
+    .switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;border-radius:999px;background:#33343a;cursor:pointer;transition:.2s}
+    .slider:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;border-radius:50%;background:white;transition:.2s}
+    .switch input:checked+.slider{background:var(--accent)}
+    .switch input:checked+.slider:before{transform:translateX(16px);background:#111}
+    .footer-actions{padding:18px;display:grid;gap:8px}
+    .export-row{display:grid;grid-template-columns:1fr auto;gap:8px}
+    .kbd{border:1px solid #3c3c44;border-bottom-color:#29292f;background:#18181c;border-radius:5px;padding:2px 5px;font-size:10px;color:#bfc0c7}
+    .toast{position:fixed;left:24px;bottom:24px;padding:10px 13px;border-radius:10px;background:#f4f4f5;color:#111;font-weight:700;font-size:12px;opacity:0;transform:translateY(8px);pointer-events:none;transition:.2s;z-index:50}
+    .toast.show{opacity:1;transform:none}
+    @media(max-width:900px){
+      .app{grid-template-columns:1fr}
+      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line)}
+      .stage-wrap{padding:20px 14px}
+      header{padding:0 14px}
+      .stage-shell{width:min(92vw,760px)}
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <main class="workspace">
+    <header>
+      <div class="brand">
+        <div class="brandmark" aria-hidden="true"></div>
+        <div>JewelCase<small>Photo → CD artwork</small></div>
+      </div>
+      <div class="top-actions">
+        <button class="btn" id="resetBtn" type="button">Reset</button>
+        <button class="btn primary" id="quickExportBtn" type="button">Export PNG</button>
+      </div>
+    </header>
+
+    <div class="stage-wrap">
+      <div>
+        <div class="stage-shell">
+          <canvas id="preview" width="900" height="900" aria-label="Jewel case artwork preview"></canvas>
+        </div>
+        <div class="hint">Drag the artwork to reposition · scroll to zoom · double-click to reset position</div>
+      </div>
+    </div>
+  </main>
+
+  <aside>
+    <div class="side-head">
+      <h1>Artwork controls</h1>
+      <p>Everything runs locally in your browser. Your photo is never uploaded.</p>
+    </div>
+
+    <section class="section">
+      <div class="section-title">Source</div>
+      <label class="upload" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*" />
+        <strong>Drop a photo here</strong>
+        <span>or click to browse JPG, PNG, WEBP</span>
+      </label>
+      <div class="presets">
+        <button class="preset" data-preset="night">Night Drive<span>purple + motion</span></button>
+        <button class="preset" data-preset="clear">Clear Disc<span>clean + glossy</span></button>
+        <button class="preset" data-preset="smoke">Smoke<span>dark + grainy</span></button>
+        <button class="preset" data-preset="bubblegum">Bubblegum<span>pink + glossy</span></button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Photo</div>
+      <div class="control">
+        <div class="control-head"><label for="zoom">Zoom</label><span class="value" id="zoomVal"></span></div>
+        <input id="zoom" type="range" min="0.6" max="2.8" value="1.1" step="0.01">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="rotation">Rotation</label><span class="value" id="rotationVal"></span></div>
+        <input id="rotation" type="range" min="-30" max="30" value="0" step="1">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="brightness">Brightness</label><span class="value" id="brightnessVal"></span></div>
+        <input id="brightness" type="range" min="55" max="145" value="92" step="1">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="contrast">Contrast</label><span class="value" id="contrastVal"></span></div>
+        <input id="contrast" type="range" min="70" max="160" value="115" step="1">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="saturation">Saturation</label><span class="value" id="saturationVal"></span></div>
+        <input id="saturation" type="range" min="0" max="180" value="100" step="1">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="motion">Spin blur</label><span class="value" id="motionVal"></span></div>
+        <input id="motion" type="range" min="0" max="18" value="4" step="1">
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Disc</div>
+      <div class="grid2">
+        <div>
+          <label class="control-head" for="discStyle">Finish</label>
+          <select id="discStyle">
+            <option value="purple">Purple tint</option>
+            <option value="clear">Clear</option>
+            <option value="smoke">Smoke</option>
+            <option value="black">Black</option>
+            <option value="pink">Pink tint</option>
+            <option value="iridescent">Iridescent</option>
+          </select>
+        </div>
+        <div>
+          <label class="control-head" for="caseStyle">Case</label>
+          <select id="caseStyle">
+            <option value="clear">Crystal clear</option>
+            <option value="worn">Worn plastic</option>
+            <option value="clean">Minimal</option>
+          </select>
+        </div>
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="discOpacity">Disc tint</label><span class="value" id="discOpacityVal"></span></div>
+        <input id="discOpacity" type="range" min="0" max="75" value="24" step="1">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="glare">Glare</label><span class="value" id="glareVal"></span></div>
+        <input id="glare" type="range" min="0" max="100" value="55" step="1">
+      </div>
+      <div class="control">
+        <div class="control-head"><label for="grain">Grain / dust</label><span class="value" id="grainVal"></span></div>
+        <input id="grain" type="range" min="0" max="100" value="30" step="1">
+      </div>
+      <div class="toggle-row"><span>Disc grooves</span><label class="switch"><input id="grooves" type="checkbox" checked><span class="slider"></span></label></div>
+      <div class="toggle-row"><span>Plastic scratches</span><label class="switch"><input id="scratches" type="checkbox" checked><span class="slider"></span></label></div>
+    </section>
+
+    <section class="section">
+      <div class="section-title">Labels</div>
+      <div class="grid2">
+        <input class="text-input" id="albumTitle" maxlength="26" placeholder="Album title">
+        <input class="text-input" id="artistName" maxlength="24" placeholder="Artist">
+      </div>
+      <div class="toggle-row"><span>Title sticker</span><label class="switch"><input id="titleSticker" type="checkbox"><span class="slider"></span></label></div>
+      <div class="toggle-row"><span>Parental advisory</span><label class="switch"><input id="advisory" type="checkbox"><span class="slider"></span></label></div>
+      <div class="toggle-row"><span>Price sticker</span><label class="switch"><input id="priceSticker" type="checkbox"><span class="slider"></span></label></div>
+      <div class="toggle-row"><span>Barcode</span><label class="switch"><input id="barcode" type="checkbox"><span class="slider"></span></label></div>
+    </section>
+
+    <div class="footer-actions">
+      <div class="export-row">
+        <select id="exportSize" aria-label="Export size">
+          <option value="1080">1080 × 1080</option>
+          <option value="2048" selected>2048 × 2048</option>
+          <option value="4096">4096 × 4096</option>
+        </select>
+        <select id="exportType" aria-label="Export format">
+          <option value="png">PNG</option>
+          <option value="jpeg">JPG</option>
+        </select>
+      </div>
+      <button class="btn primary" id="exportBtn" type="button">Download artwork</button>
+    </div>
+  </aside>
+</div>
+<div class="toast" id="toast">Exported</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const canvas = $('preview');
+  const ctx = canvas.getContext('2d');
+  const state = {
+    image:null, zoom:1.1, rotation:0, brightness:92, contrast:115, saturation:100, motion:4,
+    discStyle:'purple', caseStyle:'clear', discOpacity:24, glare:55, grain:30,
+    grooves:true, scratches:true, titleSticker:false, advisory:false, priceSticker:false, barcode:false,
+    albumTitle:'', artistName:'', x:0, y:0
+  };
+
+  const controls = [
+    'zoom','rotation','brightness','contrast','saturation','motion','discStyle','caseStyle','discOpacity','glare','grain',
+    'grooves','scratches','titleSticker','advisory','priceSticker','barcode','albumTitle','artistName'
+  ];
+
+  function syncState(){
+    controls.forEach(id=>{
+      const el=$(id);
+      state[id]=el.type==='checkbox' ? el.checked : (el.type==='range' ? Number(el.value) : el.value);
+    });
+    $('zoomVal').textContent=state.zoom.toFixed(2)+'×';
+    $('rotationVal').textContent=state.rotation+'°';
+    $('brightnessVal').textContent=state.brightness+'%';
+    $('contrastVal').textContent=state.contrast+'%';
+    $('saturationVal').textContent=state.saturation+'%';
+    $('motionVal').textContent=state.motion;
+    $('discOpacityVal').textContent=state.discOpacity+'%';
+    $('glareVal').textContent=state.glare+'%';
+    $('grainVal').textContent=state.grain+'%';
+  }
+
+  controls.forEach(id=>{
+    $(id).addEventListener('input',()=>{syncState(); requestRender();});
+    $(id).addEventListener('change',()=>{syncState(); requestRender();});
+  });
+
+  const discColors = {
+    purple:[52,35,105], clear:[165,178,190], smoke:[18,19,25], black:[4,4,7], pink:[133,56,112], iridescent:[40,70,90]
+  };
+
+  function roundedRectPath(c,x,y,w,h,r){
+    r=Math.min(r,w/2,h/2);
+    c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();
+  }
+
+  function circlePath(c,x,y,r){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.closePath();}
+
+  function drawCoverImage(c, S, cx, cy, radius){
+    c.save(); circlePath(c,cx,cy,radius); c.clip();
+    if(state.image){
+      const im=state.image, cover=radius*2;
+      const base=Math.max(cover/im.width,cover/im.height)*state.zoom;
+      const w=im.width*base,h=im.height*base;
+      c.translate(cx + state.x*S, cy + state.y*S);
+      c.rotate(state.rotation*Math.PI/180);
+      c.filter=`brightness(${state.brightness}%) contrast(${state.contrast}%) saturate(${state.saturation}%)`;
+      if(state.motion>0){
+        const steps=Math.min(10,2+Math.ceil(state.motion/2));
+        c.globalAlpha=1/Math.max(1,steps*.64);
+        for(let i=0;i<steps;i++){
+          c.save();
+          const t=(i/(steps-1||1)-.5)*(state.motion*.0048);
+          c.rotate(t);
+          c.drawImage(im,-w/2,-h/2,w,h);
+          c.restore();
+        }
+        c.globalAlpha=1;
+      } else c.drawImage(im,-w/2,-h/2,w,h);
+      c.filter='none';
+    } else {
+      const g=c.createRadialGradient(cx-radius*.3,cy-radius*.3,radius*.1,cx,cy,radius);
+      g.addColorStop(0,'#303041');g.addColorStop(.5,'#14141b');g.addColorStop(1,'#08080b');
+      c.fillStyle=g;c.fillRect(cx-radius,cy-radius,radius*2,radius*2);
+      c.save();c.translate(cx,cy);c.rotate(-.22);
+      c.fillStyle='rgba(124,92,255,.28)';c.fillRect(-radius*.12,-radius*1.3,radius*.24,radius*2.6);
+      c.rotate(.68);c.fillStyle='rgba(185,255,74,.1)';c.fillRect(-radius*.06,-radius*1.2,radius*.12,radius*2.4);c.restore();
+      c.fillStyle='rgba(255,255,255,.65)';c.textAlign='center';c.font=`700 ${S*.024}px system-ui`;c.fillText('DROP A PHOTO',cx,cy-radius*.06);
+      c.fillStyle='rgba(255,255,255,.35)';c.font=`500 ${S*.014}px system-ui`;c.fillText('to build your jewel case',cx,cy+radius*.02);
+    }
+    c.restore();
+  }
+
+  function drawDisc(c,S){
+    const cx=S*.505,cy=S*.505,r=S*.405;
+    drawCoverImage(c,S,cx,cy,r);
+
+    c.save();circlePath(c,cx,cy,r);c.clip();
+    const rgb=discColors[state.discStyle]||discColors.purple;
+    const alpha=(state.discOpacity/100)*(state.discStyle==='clear'?.5:1);
+    c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;c.fillRect(cx-r,cy-r,r*2,r*2);
+
+    if(state.discStyle==='iridescent'){
+      const rainbow=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+      rainbow.addColorStop(0,'rgba(255,80,150,.12)');rainbow.addColorStop(.35,'rgba(90,130,255,.08)');
+      rainbow.addColorStop(.7,'rgba(100,255,200,.1)');rainbow.addColorStop(1,'rgba(255,220,90,.09)');
+      c.fillStyle=rainbow;c.fillRect(cx-r,cy-r,r*2,r*2);
+    }
+    if(state.grooves){
+      c.lineWidth=Math.max(1,S*.00065);
+      for(let rr=r*.48;rr<r*.98;rr+=S*.008){
+        c.strokeStyle=`rgba(255,255,255,${.015+(rr%17)/2400})`;circlePath(c,cx,cy,rr);c.stroke();
+      }
+    }
+    const glare=state.glare/100;
+    if(glare>0){
+      const g=c.createLinearGradient(cx-r*.8,cy-r,cx+r*.75,cy+r);
+      g.addColorStop(0,'rgba(255,255,255,0)');
+      g.addColorStop(.35,`rgba(255,255,255,${.06*glare})`);
+      g.addColorStop(.44,`rgba(255,255,255,${.22*glare})`);
+      g.addColorStop(.52,'rgba(255,255,255,0)');
+      c.fillStyle=g;c.fillRect(cx-r,cy-r,r*2,r*2);
+      const rg=c.createRadialGradient(cx-r*.34,cy-r*.39,0,cx-r*.34,cy-r*.39,r*.65);
+      rg.addColorStop(0,`rgba(170,160,255,${.13*glare})`);rg.addColorStop(.4,'rgba(120,100,255,.02)');rg.addColorStop(1,'rgba(0,0,0,0)');
+      c.fillStyle=rg;c.fillRect(cx-r,cy-r,r*2,r*2);
+    }
+    c.restore();
+
+    c.strokeStyle='rgba(235,240,248,.68)';c.lineWidth=S*.004;circlePath(c,cx,cy,r);c.stroke();
+    c.strokeStyle='rgba(0,0,0,.7)';c.lineWidth=S*.003;circlePath(c,cx,cy,r-S*.009);c.stroke();
+
+    // hub / clear inner ring
+    const hubR=S*.124, holeR=S*.064;
+    const hubG=c.createRadialGradient(cx,cy,holeR,cx,cy,hubR);
+    hubG.addColorStop(0,'rgba(6,6,8,.98)');hubG.addColorStop(.48,'rgba(8,8,11,.96)');
+    hubG.addColorStop(.5,'rgba(210,220,230,.38)');hubG.addColorStop(.57,'rgba(40,42,49,.8)');hubG.addColorStop(1,'rgba(230,240,248,.12)');
+    c.fillStyle=hubG;circlePath(c,cx,cy,hubR);c.fill();
+    c.strokeStyle='rgba(255,255,255,.35)';c.lineWidth=S*.002;circlePath(c,cx,cy,hubR);c.stroke();
+    c.fillStyle='#050506';circlePath(c,cx,cy,holeR);c.fill();
+    c.strokeStyle='rgba(210,220,230,.5)';c.lineWidth=S*.003;circlePath(c,cx,cy,holeR);c.stroke();
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/2+.62, rr=hubR*.68, x=cx+Math.cos(a)*rr,y=cy+Math.sin(a)*rr;
+      c.fillStyle='#060608';circlePath(c,x,y,S*.012);c.fill();c.strokeStyle='rgba(255,255,255,.28)';c.lineWidth=S*.0014;c.stroke();
+    }
+  }
+
+  function seeded(seed){
+    let x=Math.sin(seed*999.91)*43758.5453;return x-Math.floor(x);
+  }
+
+  function drawCase(c,S){
+    const pad=S*.018;
+    // shadow
+    c.save();c.shadowColor='rgba(0,0,0,.85)';c.shadowBlur=S*.03;c.shadowOffsetY=S*.012;
+    c.fillStyle='rgba(255,255,255,.035)';roundedRectPath(c,pad,pad,S-pad*2,S-pad*2,S*.026);c.fill();c.restore();
+
+    if(state.caseStyle!=='clean'){
+      // outer rails
+      const layers=[
+        [pad,'rgba(236,248,255,.72)',S*.004],
+        [pad+S*.008,'rgba(255,255,255,.28)',S*.002],
+        [pad+S*.016,'rgba(120,140,150,.38)',S*.003]
+      ];
+      layers.forEach(([p,col,w])=>{c.strokeStyle=col;c.lineWidth=w;roundedRectPath(c,p,p,S-p*2,S-p*2,S*.024);c.stroke();});
+      // top/bottom latch ribs
+      c.strokeStyle='rgba(240,250,255,.44)';c.lineWidth=S*.002;
+      for(let i=0;i<13;i++){
+        let x=S*(.04+i*.071);c.beginPath();c.moveTo(x,S*.022);c.lineTo(x+S*.006,S*.063);c.stroke();
+        c.beginPath();c.moveTo(x,S*.978);c.lineTo(x+S*.005,S*.936);c.stroke();
+      }
+      // left hinge
+      const hg=c.createLinearGradient(S*.015,0,S*.14,0);hg.addColorStop(0,'rgba(245,250,255,.2)');hg.addColorStop(.55,'rgba(245,250,255,.52)');hg.addColorStop(1,'rgba(110,125,135,.18)');
+      c.fillStyle=hg;roundedRectPath(c,S*.018,S*.32,S*.105,S*.36,S*.018);c.fill();
+      c.strokeStyle='rgba(240,250,255,.48)';c.lineWidth=S*.003;roundedRectPath(c,S*.018,S*.32,S*.105,S*.36,S*.018);c.stroke();
+      c.fillStyle='rgba(9,9,11,.25)';roundedRectPath(c,S*.018,S*.41,S*.065,S*.18,S*.012);c.fill();
+      // right rails
+      c.fillStyle='rgba(240,250,255,.16)';c.fillRect(S*.958,S*.11,S*.018,S*.78);
+      c.strokeStyle='rgba(255,255,255,.48)';c.lineWidth=S*.002;c.beginPath();c.moveTo(S*.97,S*.12);c.lineTo(S*.97,S*.88);c.stroke();
+    }
+
+    // plastic face reflection
+    const glare=state.glare/100;
+    if(glare>0){
+      const pg=c.createLinearGradient(0,0,S,S);
+      pg.addColorStop(0,`rgba(255,255,255,${.12*glare})`);
+      pg.addColorStop(.16,'rgba(255,255,255,0)');
+      pg.addColorStop(.72,'rgba(255,255,255,0)');
+      pg.addColorStop(1,`rgba(255,255,255,${.055*glare})`);
+      c.fillStyle=pg;roundedRectPath(c,pad,pad,S-pad*2,S-pad*2,S*.026);c.fill();
+    }
+
+    if(state.scratches && state.caseStyle!=='clean'){
+      c.save();c.lineCap='round';
+      const amount=Math.round(12+state.grain*.28);
+      for(let i=0;i<amount;i++){
+        const x=seeded(i+2)*S,y=seeded(i+55)*S,len=(.02+seeded(i+9)*.11)*S,ang=(-.9+seeded(i+91)*1.8);
+        c.strokeStyle=`rgba(255,255,255,${.025+seeded(i+7)*.06})`;c.lineWidth=Math.max(.7,S*.0008);
+        c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);c.stroke();
+      }
+      c.restore();
+    }
+  }
+
+  function drawNoise(c,S){
+    if(state.grain<=0)return;
+    const count=Math.round((state.grain/100)*900);
+    c.save();
+    for(let i=0;i<count;i++){
+      const x=seeded(i+160)*S,y=seeded(i+811)*S,r=seeded(i+37)*S*.0018;
+      c.fillStyle=`rgba(255,255,255,${.02+seeded(i+111)*.08})`;circlePath(c,x,y,r);c.fill();
+    }
+    c.restore();
+  }
+
+  function drawBarcode(c,S){
+    const x=S*.075,y=S*.835,w=S*.205,h=S*.095;
+    c.fillStyle='rgba(245,245,242,.95)';roundedRectPath(c,x,y,w,h,S*.004);c.fill();
+    let cursor=x+w*.12;
+    for(let i=0;i<34;i++){
+      const bw=(1+Math.floor(seeded(i+300)*3))*S*.0017;
+      c.fillStyle='#111';c.fillRect(cursor,y+h*.13,bw,h*.58);cursor+=bw+S*.0017;
+      if(cursor>x+w*.9)break;
+    }
+    c.fillStyle='#222';c.font=`500 ${S*.009}px ui-monospace,monospace`;c.fillText('3  25270  73250  6',x+w*.12,y+h*.86);
+  }
+
+  function drawAdvisory(c,S){
+    const x=S*.075,y=S*.77,w=S*.19,h=S*.11;
+    c.fillStyle='rgba(245,245,242,.96)';c.fillRect(x,y,w,h);c.strokeStyle='#111';c.lineWidth=S*.004;c.strokeRect(x,y,w,h);
+    c.fillStyle='#111';c.textAlign='center';c.font=`900 ${S*.018}px Arial Black,Arial,sans-serif`;c.fillText('PARENTAL',x+w/2,y+h*.37);
+    c.fillStyle='#111';c.fillRect(x+S*.008,y+h*.43,w-S*.016,h*.22);c.fillStyle='#fff';c.font=`900 ${S*.014}px Arial Black,Arial,sans-serif`;c.fillText('ADVISORY',x+w/2,y+h*.595);
+    c.fillStyle='#111';c.font=`800 ${S*.012}px Arial,sans-serif`;c.fillText('EXPLICIT CONTENT',x+w/2,y+h*.84);
+  }
+
+  function drawPrice(c,S){
+    const x=S*.08,y=S*.67,w=S*.15,h=S*.075;
+    c.save();c.translate(x+w/2,y+h/2);c.rotate(-.08);
+    c.fillStyle='rgba(218,126,151,.92)';roundedRectPath(c,-w/2,-h/2,w,h,S*.003);c.fill();
+    c.fillStyle='rgba(40,22,28,.8)';c.textAlign='center';c.font=`700 ${S*.012}px ui-monospace,monospace`;c.fillText('REDUCED TO',0,-h*.1);
+    c.font=`700 ${S*.025}px ui-monospace,monospace`;c.fillText('$ 9.99',0,h*.27);c.restore();
+  }
+
+  function drawTitleSticker(c,S){
+    const title=(state.albumTitle||'UNTITLED').toUpperCase(), artist=(state.artistName||'JEWELCASE').toUpperCase();
+    const x=S*.49,y=S*.865,w=S*.39,h=S*.075;
+    c.save();c.translate(x+w/2,y+h/2);c.rotate(-.015);
+    c.fillStyle='rgba(232,129,99,.94)';roundedRectPath(c,-w/2,-h/2,w,h,S*.003);c.fill();
+    c.fillStyle='#1b1311';c.textAlign='left';c.font=`900 ${S*.025}px Impact,Arial Black,sans-serif`;
+    c.fillText(title.slice(0,16),-w*.45,h*.08);
+    c.font=`800 ${S*.010}px system-ui`;c.fillText(artist.slice(0,20),-w*.45,h*.3);c.restore();
+  }
+
+  function render(target=canvas,size=900){
+    target.width=size;target.height=size;
+    const c=target.getContext('2d'),S=size;
+    c.clearRect(0,0,S,S);c.fillStyle='#050506';c.fillRect(0,0,S,S);
+
+    // subtle background outside disc
+    const bg=c.createRadialGradient(S*.5,S*.48,S*.12,S*.5,S*.48,S*.75);
+    bg.addColorStop(0,'#15151a');bg.addColorStop(1,'#030304');c.fillStyle=bg;c.fillRect(0,0,S,S);
+
+    drawDisc(c,S);
+    drawCase(c,S);
+    drawNoise(c,S);
+    if(state.titleSticker)drawTitleSticker(c,S);
+    if(state.priceSticker)drawPrice(c,S);
+    if(state.advisory)drawAdvisory(c,S);
+    if(state.barcode)drawBarcode(c,S);
+
+    // final crisp inner case lip
+    c.strokeStyle='rgba(255,255,255,.22)';c.lineWidth=S*.0015;roundedRectPath(c,S*.035,S*.035,S*.93,S*.93,S*.02);c.stroke();
+  }
+
+  let raf=0;
+  function requestRender(){
+    if(raf)return;
+    raf=requestAnimationFrame(()=>{raf=0;render(canvas,900);});
+  }
+
+  function loadFile(file){
+    if(!file || !file.type.startsWith('image/'))return;
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{state.image=img;state.x=0;state.y=0;requestRender();toast('Photo loaded');};
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  $('fileInput').addEventListener('change',e=>loadFile(e.target.files[0]));
+  const dz=$('dropZone');
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over')}));
+  dz.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+
+  let dragging=false,lastX=0,lastY=0;
+  canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging')});
+  canvas.addEventListener('pointermove',e=>{
+    if(!dragging)return;
+    const rect=canvas.getBoundingClientRect();
+    state.x+=(e.clientX-lastX)/rect.width;state.y+=(e.clientY-lastY)/rect.height;
+    lastX=e.clientX;lastY=e.clientY;requestRender();
+  });
+  canvas.addEventListener('pointerup',()=>{dragging=false;canvas.classList.remove('dragging')});
+  canvas.addEventListener('pointercancel',()=>{dragging=false;canvas.classList.remove('dragging')});
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();state.zoom=Math.max(.6,Math.min(2.8,state.zoom*(e.deltaY<0?1.05:.95)));
+    $('zoom').value=state.zoom;syncState();requestRender();
+  },{passive:false});
+  canvas.addEventListener('dblclick',()=>{state.x=0;state.y=0;requestRender()});
+
+  const presets={
+    night:{discStyle:'purple',caseStyle:'clear',discOpacity:28,glare:62,grain:34,motion:7,brightness:88,contrast:122,saturation:105},
+    clear:{discStyle:'clear',caseStyle:'clean',discOpacity:12,glare:68,grain:12,motion:0,brightness:100,contrast:105,saturation:100},
+    smoke:{discStyle:'smoke',caseStyle:'worn',discOpacity:38,glare:35,grain:58,motion:3,brightness:78,contrast:136,saturation:82},
+    bubblegum:{discStyle:'pink',caseStyle:'clear',discOpacity:26,glare:76,grain:22,motion:2,brightness:102,contrast:112,saturation:118}
+  };
+  document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click',()=>{
+    const p=presets[btn.dataset.preset];Object.assign(state,p);
+    Object.keys(p).forEach(k=>{if($(k))$(k).value=p[k]});
+    syncState();requestRender();toast(btn.firstChild.textContent.trim()+' preset');
+  }));
+
+  function reset(){
+    Object.assign(state,{zoom:1.1,rotation:0,brightness:92,contrast:115,saturation:100,motion:4,discStyle:'purple',caseStyle:'clear',discOpacity:24,glare:55,grain:30,grooves:true,scratches:true,titleSticker:false,advisory:false,priceSticker:false,barcode:false,albumTitle:'',artistName:'',x:0,y:0});
+    controls.forEach(id=>{const el=$(id); if(el.type==='checkbox')el.checked=state[id];else el.value=state[id]});
+    syncState();requestRender();toast('Controls reset');
+  }
+  $('resetBtn').addEventListener('click',reset);
+
+  function safeName(){
+    const raw=(state.albumTitle||'jewelcase').trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+    return raw||'jewelcase';
+  }
+  function exportArtwork(){
+    const size=Number($('exportSize').value),type=$('exportType').value;
+    const out=document.createElement('canvas');render(out,size);
+    const mime=type==='jpeg'?'image/jpeg':'image/png';
+    out.toBlob(blob=>{
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${safeName()}-${size}.${type==='jpeg'?'jpg':'png'}`;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast(`Exported ${size}×${size}`);
+    },mime,type==='jpeg'?.94:undefined);
+  }
+  $('exportBtn').addEventListener('click',exportArtwork);
+  $('quickExportBtn').addEventListener('click',()=>{$('exportType').value='png';exportArtwork()});
+
+  function toast(msg){
+    const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.classList.remove('show'),1700);
+  }
+
+  syncState();requestRender();
+})();
+</script>
+</body>
+</html>

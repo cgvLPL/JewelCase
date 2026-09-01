@@ -311,35 +311,60 @@
   function circlePath(c,x,y,r){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.closePath();}
 
   function drawCenteredHubText(c,S,cx,cy){
-    const text='US PAT. 12/234567 CAN PAT. 1234567 EURO PAT. 1234567';
-    const start=Math.PI*.93;
-    const end=-Math.PI*.13;
+    const text='US PAT. 12/234567 - CAN PAT. 1234567 - EURO PAT. 1234567';
     const radius=S*.0890;
+    const ringOuter=S*.1045;
+    const ringInner=S*.0715;
 
+    // Remove the perspective-shifted lettering baked into the source photo.
     c.save();
     c.beginPath();
-    c.arc(cx,cy,S*.1045,0,Math.PI*2);
-    c.arc(cx,cy,S*.0715,0,Math.PI*2,true);
+    c.arc(cx,cy,ringOuter,0,Math.PI*2);
+    c.arc(cx,cy,ringInner,0,Math.PI*2,true);
     c.clip('evenodd');
-    c.fillStyle='rgba(4,4,6,.985)';
-    c.fillRect(cx-S*.11,cy-S*.11,S*.22,S*.22);
+    c.fillStyle='rgba(4,4,6,.99)';
+    c.fillRect(cx-ringOuter,cy-ringOuter,ringOuter*2,ringOuter*2);
     c.restore();
 
     c.save();
-    c.fillStyle='rgba(236,236,232,.84)';
+    c.fillStyle='rgba(238,238,234,.88)';
     c.textAlign='center';
     c.textBaseline='middle';
-    c.font=`500 ${Math.max(8,S*.0088)}px Arial, Helvetica, sans-serif`;
-    const chars=[...text];
-    const step=(end-start)/Math.max(1,chars.length-1);
-    chars.forEach((ch,i)=>{
-      const a=start+step*i;
+
+    let fontPx=Math.max(7,S*.0078);
+    const tracking=S*.00042;
+    const maxArc=2.48; // centered across the upper arc only
+
+    function setFont(){
+      c.font=`500 ${fontPx}px Arial, Helvetica, sans-serif`;
+    }
+    function totalArc(){
+      let px=0;
+      for(const ch of text) px+=c.measureText(ch).width+tracking;
+      return Math.max(0,px-tracking)/radius;
+    }
+
+    setFont();
+    let arc=totalArc();
+    while(arc>maxArc && fontPx>S*.0058){
+      fontPx*=.96;
+      setFont();
+      arc=totalArc();
+    }
+
+    // True concentric arc: the midpoint is exactly 12 o'clock.
+    let angle=-Math.PI/2-arc/2;
+    for(const ch of text){
+      const w=c.measureText(ch).width;
+      const advance=(w+tracking)/radius;
+      const a=angle+advance/2;
       c.save();
       c.translate(cx+Math.cos(a)*radius,cy+Math.sin(a)*radius);
       c.rotate(a+Math.PI/2);
       c.fillText(ch,0,0);
       c.restore();
-    });
+      angle+=advance;
+    }
     c.restore();
   }
 

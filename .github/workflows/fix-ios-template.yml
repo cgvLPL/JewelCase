@@ -1,0 +1,107 @@
+name: Fix iOS jewel-case template
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fix-ios-template.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Convert AVIF template to PNG
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick libheif1
+          magick assets/jewel-case-template.avif -strip -define png:compression-level=9 assets/jewel-case-template.png
+          file assets/jewel-case-template.png
+          test "$(wc -c < assets/jewel-case-template.png)" -gt 100000
+
+      - name: Use PNG with resilient fallback
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("index.html")
+          s = p.read_text()
+
+          s = s.replace(
+              "templateImage.src = 'assets/jewel-case-template.avif';",
+              "templateImage.src = 'assets/jewel-case-template.png';"
+          )
+
+          old = """  templateImage.onload = () => requestRender();"""
+          new = """  templateImage.onload = () => requestRender();
+  templateImage.onerror = () => {
+    console.error('Jewel-case template failed to load');
+    requestRender();
+  };"""
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          # Make the procedural fallback clearly look like a jewel case instead of a black square.
+          old_fallback = """    } else {
+      const bg=c.createRadialGradient(S*.5,S*.49,S*.12,S*.5,S*.49,S*.72);
+      bg.addColorStop(0,'#303035');bg.addColorStop(.55,'#111114');bg.addColorStop(1,'#020203');
+      c.fillStyle=bg;c.fillRect(0,0,S,S);
+    }"""
+          new_fallback = """    } else {
+      const bg=c.createRadialGradient(S*.5,S*.5,S*.08,S*.5,S*.5,S*.72);
+      bg.addColorStop(0,'#25262a');bg.addColorStop(.58,'#0d0e11');bg.addColorStop(1,'#020203');
+      c.fillStyle=bg;c.fillRect(0,0,S,S);
+
+      c.save();
+      c.strokeStyle='rgba(235,245,255,.55)';
+      c.lineWidth=S*.012;
+      roundedRectPath(c,S*.035,S*.035,S*.93,S*.93,S*.025);
+      c.stroke();
+
+      c.strokeStyle='rgba(255,255,255,.22)';
+      c.lineWidth=S*.004;
+      roundedRectPath(c,S*.052,S*.052,S*.896,S*.896,S*.018);
+      c.stroke();
+
+      const cx=S*.5,cy=S*.502,r=S*.409;
+      const rg=c.createRadialGradient(cx-r*.35,cy-r*.35,r*.08,cx,cy,r);
+      rg.addColorStop(0,'rgba(230,235,240,.24)');
+      rg.addColorStop(.65,'rgba(110,118,128,.12)');
+      rg.addColorStop(1,'rgba(225,235,245,.24)');
+      c.fillStyle=rg;circlePath(c,cx,cy,r);c.fill();
+      c.strokeStyle='rgba(245,250,255,.4)';c.lineWidth=S*.006;circlePath(c,cx,cy,r);c.stroke();
+
+      c.fillStyle='#08090b';circlePath(c,cx,cy,S*.147);c.fill();
+      c.strokeStyle='rgba(245,250,255,.32)';c.lineWidth=S*.005;circlePath(c,cx,cy,S*.147);c.stroke();
+      c.restore();
+    }"""
+          if old_fallback in s:
+              s = s.replace(old_fallback, new_fallback, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/jewel-case-template.png index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix iOS jewel-case template rendering"
+          git push

@@ -398,61 +398,8 @@
 
   function drawOuterRingText(c,S,cx,cy,r){
     const text='MADE IN ENGLAND - OPTIMEDIA SOLUTIONS - POLYCARBONATE';
-    const inner=S*.3740;
-    const outer=S*.4145;
     const textRadius=S*.3975;
-    const sectorStart=1.73;
-    const sectorEnd=2.88;
 
-    // Remove the warped lettering baked into the source photograph.
-    c.save();
-    c.beginPath();
-    c.arc(cx,cy,outer,sectorStart,sectorEnd,false);
-    c.arc(cx,cy,inner,sectorEnd,sectorStart,true);
-    c.closePath();
-    c.clip();
-
-    if(state.image){
-      c.globalCompositeOperation='source-over';
-      c.globalAlpha=1;
-      drawCoverImage(c,S,cx,cy,r*1.012);
-    }else{
-      const clean=c.createRadialGradient(cx,cy,inner,cx,cy,outer);
-      clean.addColorStop(0,'rgba(47,49,51,.98)');
-      clean.addColorStop(.58,'rgba(72,74,75,.98)');
-      clean.addColorStop(1,'rgba(116,119,119,.95)');
-      c.fillStyle=clean;
-      c.fillRect(cx-r,cy-r,r*2,r*2);
-    }
-
-    // Put back a restrained translucent-disc sheen in the cleaned band.
-    c.globalCompositeOperation='screen';
-    c.globalAlpha=.20+(state.glare/100)*.10;
-    const sheen=c.createLinearGradient(cx-r,cy+r*.25,cx+r,cy+r*.85);
-    sheen.addColorStop(0,'rgba(255,255,255,.04)');
-    sheen.addColorStop(.52,'rgba(255,255,255,.12)');
-    sheen.addColorStop(1,'rgba(255,255,255,.03)');
-    c.fillStyle=sheen;
-    c.fillRect(cx-r,cy-r,r*2,r*2);
-    c.restore();
-
-    // Rebuild a few subtle concentric grooves so the cleaned area still
-    // reads as part of the physical disc rather than a flat patch.
-    c.save();
-    c.beginPath();
-    c.arc(cx,cy,outer,sectorStart,sectorEnd,false);
-    c.arc(cx,cy,inner,sectorEnd,sectorStart,true);
-    c.closePath();
-    c.clip();
-    c.lineWidth=Math.max(.55,S*.00042);
-    for(let rr=inner;rr<outer;rr+=S*.0068){
-      c.strokeStyle='rgba(255,255,255,.045)';
-      circlePath(c,cx,cy,rr);
-      c.stroke();
-    }
-    c.restore();
-
-    // Draw the replacement phrase once, measured along the clockwise arc.
     c.save();
     c.fillStyle='rgba(242,242,238,.86)';
     c.textAlign='center';

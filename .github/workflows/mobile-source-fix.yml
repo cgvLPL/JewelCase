@@ -1,0 +1,97 @@
+name: Fix mobile source panel
+
+on:
+  push:
+    paths:
+      - ".github/workflows/mobile-source-fix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-mobile-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch mobile source/upload UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("index.html")
+          s = p.read_text()
+
+          old = """    .upload{
+      border:1px dashed #45454f;border-radius:14px;padding:16px;text-align:center;background:#0d0d10;cursor:pointer;
+      transition:.18s border-color,.18s background
+    }
+    .upload:hover,.upload.over{border-color:var(--accent);background:#11140d}
+    .upload strong{display:block;font-size:13px;margin-bottom:4px}
+    .upload span{font-size:11px;color:var(--muted)}
+    .upload input{display:none}"""
+
+          new = """    .upload{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      width:100%;min-height:118px;border:1px dashed #45454f;border-radius:14px;
+      padding:18px 16px;text-align:center;background:#0d0d10;cursor:pointer;
+      transition:.18s border-color,.18s background;overflow:hidden;
+      -webkit-tap-highlight-color:transparent
+    }
+    .upload:hover,.upload.over{border-color:var(--accent);background:#11140d}
+    .upload strong,.upload span{display:block;width:100%;text-align:center}
+    .upload strong{font-size:13px;line-height:1.35;margin:0 0 6px}
+    .upload span{font-size:11px;line-height:1.45;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
+    .upload input{display:none}"""
+
+          if old not in s:
+              raise SystemExit("Upload CSS block not found")
+          s = s.replace(old, new, 1)
+
+          old_media = """    @media(max-width:900px){
+      .app{grid-template-columns:1fr}
+      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line)}
+      .stage-wrap{padding:20px 14px}
+      header{padding:0 14px}
+      .stage-shell{width:min(92vw,760px)}
+    }"""
+
+          new_media = """    @media(max-width:900px){
+      .app{grid-template-columns:1fr}
+      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line);overflow:visible}
+      .stage-wrap{padding:20px 14px}
+      header{padding:0 14px}
+      .stage-shell{width:min(92vw,760px)}
+      .section{padding:16px 14px}
+      .upload{min-height:124px;padding:20px 14px}
+      .presets{gap:10px;margin-top:12px}
+      .preset{min-width:0}
+      .footer-actions{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+    }"""
+
+          if old_media not in s:
+              raise SystemExit("Mobile media block not found")
+          s = s.replace(old_media, new_media, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix mobile source upload layout"
+          git push

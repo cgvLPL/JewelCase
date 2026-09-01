@@ -1,0 +1,90 @@
+name: Fix center hub text alignment
+
+on:
+  push:
+    paths:
+      - ".github/workflows/fix-center-hub-text.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-hub-text:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Align hub and preserve molded text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("index.html")
+          s = p.read_text()
+
+          old = "const cx=S*.5000,cy=S*.4960,r=S*.4270,hubR=S*.1290;"
+          new = "const cx=S*.5100,cy=S*.4960,r=S*.4270,hubR=S*.1260,hubProtectR=S*.1600;"
+          if old not in s:
+              raise SystemExit("Expected hub geometry not found")
+          s = s.replace(old, new, 1)
+
+          # Keep artwork / tint / grooves out of the photographed molded hub text ring.
+          s = s.replace(
+              "c.arc(cx,cy,hubR,0,Math.PI*2,true);",
+              "c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);"
+          )
+
+          marker = """    // Re-project the supplied photograph as the final specular/plastic layer.
+    // Screen mode makes the black background disappear while retaining the
+    // real case rails, disc reflections, dust and acrylic highlights.
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.globalCompositeOperation='screen';
+      c.globalAlpha=.18+(state.glare/100)*.42;
+      c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
+    }
+"""
+          replacement = marker + """
+    // Restore the photographed center hub at full opacity so the molded
+    // patent text and locking ring stay perfectly centered and legible.
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.beginPath();
+      c.arc(cx,cy,hubProtectR,0,Math.PI*2);
+      c.clip();
+      c.globalCompositeOperation='source-over';
+      c.globalAlpha=1;
+      c.imageSmoothingEnabled=true;
+      c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
+    }
+"""
+          if marker not in s:
+              raise SystemExit("Specular template block not found")
+          s = s.replace(marker, replacement, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix center hub text alignment"
+          git push

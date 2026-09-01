@@ -384,113 +384,145 @@
   }
 
   function drawCenterLockHub(c,S,cx,cy){
-    const outerR=S*.0660;
-    const seatR=S*.0565;
-    const holeR=S*.0335;
-    const toothOuter=S*.0550;
-    const toothInner=S*.0370;
-    const toothHalf=.155;
-    const teeth=8;
+    // Real CD geometry: 120 mm disc with a 15 mm center hole.
+    // At the calibrated on-canvas disc radius this puts the visible hole
+    // at about .053S, with the jewel-case locking petals sitting inside it.
+    const outerR=S*.0710;
+    const discHoleR=S*.0535;
+    const coreR=S*.0295;
+    const petalOuter=S*.0515;
+    const petalInner=S*.0325;
+    const teeth=12;
+    const halfGap=.050;
+    const halfPetal=.118;
 
     c.save();
 
-    // Raised black/clear plastic hub seat.
-    const base=c.createRadialGradient(cx-S*.012,cy-S*.014,S*.010,cx,cy,outerR);
-    base.addColorStop(0,'rgba(38,40,45,.98)');
-    base.addColorStop(.46,'rgba(17,18,22,.99)');
-    base.addColorStop(.82,'rgba(6,7,9,1)');
-    base.addColorStop(1,'rgba(1,1,2,1)');
-    c.fillStyle=base;
+    // Clear/black molded hub seat beneath the locking petals.
+    const seat=c.createRadialGradient(cx-S*.010,cy-S*.012,S*.004,cx,cy,outerR);
+    seat.addColorStop(0,'rgba(112,118,126,.58)');
+    seat.addColorStop(.30,'rgba(49,53,60,.72)');
+    seat.addColorStop(.68,'rgba(14,16,20,.96)');
+    seat.addColorStop(1,'rgba(2,3,5,1)');
+    c.fillStyle=seat;
     circlePath(c,cx,cy,outerR);
     c.fill();
 
-    // Outer molded lip and inner seat ring.
-    c.lineWidth=Math.max(1,S*.0015);
-    c.strokeStyle='rgba(245,248,250,.28)';
+    // Bright molded outer lip, like the clear plastic ring in a jewel case.
+    c.lineWidth=Math.max(1,S*.00155);
+    c.strokeStyle='rgba(244,248,252,.38)';
     circlePath(c,cx,cy,outerR);
     c.stroke();
-    c.strokeStyle='rgba(255,255,255,.12)';
-    circlePath(c,cx,cy,seatR);
+
+    c.lineWidth=Math.max(.8,S*.00085);
+    c.strokeStyle='rgba(255,255,255,.17)';
+    circlePath(c,cx,cy,discHoleR*1.06);
     c.stroke();
 
-    // Subtle lower-right shadow for depth.
-    c.save();
-    c.translate(S*.0016,S*.0022);
-    c.lineWidth=Math.max(1,S*.0022);
-    c.strokeStyle='rgba(0,0,0,.72)';
-    circlePath(c,cx,cy,seatR*.97);
-    c.stroke();
-    c.restore();
+    // Dark recess corresponding to the CD's 15 mm hole.
+    const recess=c.createRadialGradient(cx-S*.006,cy-S*.008,S*.003,cx,cy,discHoleR);
+    recess.addColorStop(0,'rgba(10,11,14,.98)');
+    recess.addColorStop(.72,'rgba(3,4,6,1)');
+    recess.addColorStop(1,'rgba(0,0,1,1)');
+    c.fillStyle=recess;
+    circlePath(c,cx,cy,discHoleR);
+    c.fill();
 
-    // Eight flexible retaining fingers like a real jewel-case spindle hub.
+    // Twelve flexible retaining petals. Alternating highlights/shadows make
+    // the hub read as injection-molded plastic rather than a flat icon.
     for(let i=0;i<teeth;i++){
       const a=-Math.PI/2+i*(Math.PI*2/teeth);
-      const ao1=a-toothHalf, ao2=a+toothHalf;
-      const ai1=a-toothHalf*.58, ai2=a+toothHalf*.58;
-
-      const p1=[cx+Math.cos(ao1)*toothOuter,cy+Math.sin(ao1)*toothOuter];
-      const p2=[cx+Math.cos(ai1)*toothInner,cy+Math.sin(ai1)*toothInner];
-      const p3=[cx+Math.cos(ai2)*toothInner,cy+Math.sin(ai2)*toothInner];
-      const p4=[cx+Math.cos(ao2)*toothOuter,cy+Math.sin(ao2)*toothOuter];
+      const a1=a-halfPetal;
+      const a2=a+halfPetal;
+      const b1=a-halfGap;
+      const b2=a+halfGap;
 
       c.beginPath();
-      c.moveTo(p1[0],p1[1]);
-      c.lineTo(p2[0],p2[1]);
+      c.moveTo(cx+Math.cos(a1)*petalOuter, cy+Math.sin(a1)*petalOuter);
+      c.lineTo(cx+Math.cos(b1)*petalInner, cy+Math.sin(b1)*petalInner);
       c.quadraticCurveTo(
-        cx+Math.cos(a)*holeR*.92,
-        cy+Math.sin(a)*holeR*.92,
-        p3[0],p3[1]
+        cx+Math.cos(a)*coreR*.96,
+        cy+Math.sin(a)*coreR*.96,
+        cx+Math.cos(b2)*petalInner,
+        cy+Math.sin(b2)*petalInner
       );
-      c.lineTo(p4[0],p4[1]);
+      c.lineTo(cx+Math.cos(a2)*petalOuter, cy+Math.sin(a2)*petalOuter);
       c.quadraticCurveTo(
-        cx+Math.cos(a)*toothOuter*1.035,
-        cy+Math.sin(a)*toothOuter*1.035,
-        p1[0],p1[1]
+        cx+Math.cos(a)*petalOuter*1.035,
+        cy+Math.sin(a)*petalOuter*1.035,
+        cx+Math.cos(a1)*petalOuter,
+        cy+Math.sin(a1)*petalOuter
       );
       c.closePath();
 
-      const gx=cx+Math.cos(a)*toothOuter*.35;
-      const gy=cy+Math.sin(a)*toothOuter*.35;
-      const tg=c.createRadialGradient(gx-S*.006,gy-S*.006,S*.002,gx,gy,toothOuter*.85);
-      tg.addColorStop(0,'rgba(205,210,216,.78)');
-      tg.addColorStop(.38,'rgba(105,110,118,.72)');
-      tg.addColorStop(.78,'rgba(35,38,44,.94)');
-      tg.addColorStop(1,'rgba(8,9,12,.98)');
-      c.fillStyle=tg;
+      const gx=cx+Math.cos(a-Math.PI*.18)*petalOuter*.35;
+      const gy=cy+Math.sin(a-Math.PI*.18)*petalOuter*.35;
+      const g=c.createRadialGradient(gx,gy,S*.0015,cx,cy,petalOuter*.95);
+      if(i%2===0){
+        g.addColorStop(0,'rgba(225,230,236,.86)');
+        g.addColorStop(.40,'rgba(117,124,133,.72)');
+      }else{
+        g.addColorStop(0,'rgba(176,183,192,.68)');
+        g.addColorStop(.40,'rgba(83,89,98,.72)');
+      }
+      g.addColorStop(.80,'rgba(28,31,37,.96)');
+      g.addColorStop(1,'rgba(6,7,10,1)');
+      c.fillStyle=g;
       c.fill();
-      c.lineWidth=Math.max(.8,S*.00075);
-      c.strokeStyle='rgba(235,238,242,.34)';
+
+      c.lineWidth=Math.max(.75,S*.00062);
+      c.strokeStyle='rgba(245,248,252,.34)';
       c.stroke();
 
-      // Thin crease at each finger root.
+      // Radial slot between neighboring petals.
       c.beginPath();
       c.moveTo(
-        cx+Math.cos(a-toothHalf*.78)*toothOuter*.92,
-        cy+Math.sin(a-toothHalf*.78)*toothOuter*.92
+        cx+Math.cos(a+halfPetal+.022)*petalInner*.96,
+        cy+Math.sin(a+halfPetal+.022)*petalInner*.96
       );
       c.lineTo(
-        cx+Math.cos(a+toothHalf*.78)*toothOuter*.92,
-        cy+Math.sin(a+toothHalf*.78)*toothOuter*.92
+        cx+Math.cos(a+halfPetal+.022)*petalOuter*.98,
+        cy+Math.sin(a+halfPetal+.022)*petalOuter*.98
       );
-      c.strokeStyle='rgba(0,0,0,.46)';
-      c.lineWidth=Math.max(.7,S*.00055);
+      c.lineWidth=Math.max(1,S*.00105);
+      c.strokeStyle='rgba(0,0,0,.88)';
       c.stroke();
     }
 
-    // True center aperture.
-    c.fillStyle='#010102';
-    circlePath(c,cx,cy,holeR);
+    // Central push-button/core.
+    const core=c.createRadialGradient(cx-S*.007,cy-S*.008,S*.002,cx,cy,coreR);
+    core.addColorStop(0,'rgba(63,68,77,.96)');
+    core.addColorStop(.42,'rgba(25,28,34,.99)');
+    core.addColorStop(1,'rgba(2,3,5,1)');
+    c.fillStyle=core;
+    circlePath(c,cx,cy,coreR);
     c.fill();
-    c.lineWidth=Math.max(1,S*.0011);
-    c.strokeStyle='rgba(245,247,250,.32)';
-    circlePath(c,cx,cy,holeR);
+
+    c.lineWidth=Math.max(1,S*.00115);
+    c.strokeStyle='rgba(248,250,252,.27)';
+    circlePath(c,cx,cy,coreR);
     c.stroke();
 
-    // Highlight arc on the molded hub lip.
+    // Small center depression seen on push-to-release jewel-case hubs.
+    c.fillStyle='rgba(0,0,1,.92)';
+    circlePath(c,cx,cy,S*.0145);
+    c.fill();
+    c.lineWidth=Math.max(.8,S*.00075);
+    c.strokeStyle='rgba(255,255,255,.14)';
+    circlePath(c,cx,cy,S*.0145);
+    c.stroke();
+
+    // Specular highlight arcs on the clear molded plastic.
     c.beginPath();
-    c.arc(cx,cy,outerR*.94,Math.PI*1.04,Math.PI*1.82);
-    c.lineWidth=Math.max(1,S*.00105);
-    c.strokeStyle='rgba(255,255,255,.22)';
+    c.arc(cx,cy,outerR*.93,Math.PI*1.04,Math.PI*1.72);
+    c.lineWidth=Math.max(1,S*.00115);
+    c.strokeStyle='rgba(255,255,255,.30)';
+    c.stroke();
+
+    c.beginPath();
+    c.arc(cx,cy,discHoleR*.96,Math.PI*.08,Math.PI*.62);
+    c.lineWidth=Math.max(.8,S*.00075);
+    c.strokeStyle='rgba(255,255,255,.14)';
     c.stroke();
 
     c.restore();

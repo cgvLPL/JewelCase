@@ -363,13 +363,13 @@
 
   function drawDisc(c,S){
     // Geometry is calibrated to the supplied 1024px jewel-case photograph, centered on the photographed hub.
-    const cx=S*.5000,cy=S*.4960,r=S*.4270,hubR=S*.1290;
+    const cx=S*.5100,cy=S*.4960,r=S*.4270,hubR=S*.1260,hubProtectR=S*.1600;
 
     if(state.image){
       c.save();
       c.beginPath();
       c.arc(cx,cy,r,0,Math.PI*2);
-      c.arc(cx,cy,hubR,0,Math.PI*2,true);
+      c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);
       c.clip('evenodd');
 
       // Overlay blending lets the real photographed disc keep its physical
@@ -386,7 +386,7 @@
     const alpha=(state.discOpacity/100)*(state.discStyle==='clear'?.32:1);
     if(alpha>0){
       c.save();
-      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubR,0,Math.PI*2,true);c.clip('evenodd');
+      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);c.clip('evenodd');
       c.globalCompositeOperation=state.discStyle==='black'?'multiply':'soft-light';
       c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
       c.fillRect(cx-r,cy-r,r*2,r*2);
@@ -403,7 +403,7 @@
 
     if(state.grooves){
       c.save();
-      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubR,0,Math.PI*2,true);c.clip('evenodd');
+      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);c.clip('evenodd');
       c.lineWidth=Math.max(.65,S*.00045);
       for(let rr=hubR*1.12;rr<r*.985;rr+=S*.0075){
         c.strokeStyle=`rgba(255,255,255,${.009+(rr%19)/3600})`;
@@ -420,6 +420,21 @@
       c.globalCompositeOperation='screen';
       c.globalAlpha=.18+(state.glare/100)*.42;
       c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
+    }
+
+    // Restore the photographed center hub at full opacity so the molded
+    // patent text and locking ring stay perfectly centered and legible.
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.beginPath();
+      c.arc(cx,cy,hubProtectR,0,Math.PI*2);
+      c.clip();
+      c.globalCompositeOperation='source-over';
+      c.globalAlpha=1;
+      c.imageSmoothingEnabled=true;
+      c.imageSmoothingQuality='high';
       c.drawImage(templateImage,0,0,S,S);
       c.restore();
     }

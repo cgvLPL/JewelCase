@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/jewelcase-logo.png" alt="JewelCase - Photo to Jewel Case Artwork" width="900">
+  <img src="assets/jewelcase-logo.webp" alt="JewelCase - Photo to Jewel Case Artwork" width="900">
 </p>
 
 Turn any photo into Y2K-inspired jewel-case / CD artwork directly in the browser.

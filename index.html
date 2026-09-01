@@ -29,10 +29,11 @@
       border-bottom:1px solid rgba(255,255,255,.08);background:rgba(9,9,11,.72);backdrop-filter:blur(18px);
       position:sticky;top:0;z-index:10
     }
-    .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:-.03em}
-    .brandmark{width:34px;height:34px;border:1px solid #444;border-radius:50%;position:relative;background:radial-gradient(circle at 35% 30%,#777 0 3%,#16161b 28%,#050506 50%,#292930 53%,#0b0b0d 68%,#555 70%,#111 73%)}
-    .brandmark:after{content:"";position:absolute;inset:11px;border:1px solid #777;border-radius:50%;background:#09090b}
-    .brand small{display:block;color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-top:2px}
+    .brand{display:flex;align-items:center;min-width:0}
+    .brand-logo{
+      display:block;width:250px;max-width:34vw;height:auto;max-height:54px;object-fit:contain;object-position:left center;
+      filter:drop-shadow(0 2px 8px rgba(124,92,255,.18));
+    }
     .top-actions{display:flex;gap:8px}
     .btn{
       border:1px solid var(--line);background:var(--panel2);border-radius:11px;padding:9px 12px;font-weight:700;font-size:13px;
@@ -110,6 +111,14 @@
       .presets{gap:10px;margin-top:12px}
       .preset{min-width:0}
       .footer-actions{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+      .brand-logo{width:180px;max-width:38vw;max-height:46px}
+      .top-actions{gap:6px}
+      .top-actions .btn{padding:8px 10px;font-size:12px}
+    }
+    @media(max-width:520px){
+      header{height:66px;padding:0 10px;gap:8px}
+      .brand-logo{width:145px;max-width:40vw;max-height:42px}
+      .top-actions .btn{padding:7px 8px;font-size:11px}
     }
   </style>
 </head>
@@ -118,8 +127,7 @@
   <main class="workspace">
     <header>
       <div class="brand">
-        <div class="brandmark" aria-hidden="true"></div>
-        <div>JewelCase<small>Photo → CD artwork</small></div>
+        <img class="brand-logo" src="assets/jewelcase-logo.png" alt="JewelCase - Photo to Jewel Case Artwork">
       </div>
       <div class="top-actions">
         <button class="btn" id="resetBtn" type="button">Reset</button>

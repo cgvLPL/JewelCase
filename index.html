@@ -241,7 +241,8 @@
       <div class="export-row">
         <select id="exportSize" aria-label="Export size">
           <option value="1080">1080 × 1080</option>
-          <option value="2048" selected>2048 × 2048</option>
+          <option value="2048">2048 × 2048</option>
+          <option value="3000" selected>3000 × 3000</option>
           <option value="4096">4096 × 4096</option>
         </select>
         <select id="exportType" aria-label="Export format">
@@ -262,7 +263,7 @@
   const ctx = canvas.getContext('2d');
   const templateImage = new Image();
   templateImage.decoding = 'async';
-  templateImage.src = 'assets/jewel-case-template.png';
+  templateImage.src = 'assets/jewel-case-template-3000dpi.png';
   templateImage.onload = () => requestRender();
   const state = {
     image:null, zoom:1.05, rotation:0, brightness:100, contrast:108, saturation:100, motion:2,
@@ -362,7 +363,7 @@
 
   function drawDisc(c,S){
     // Geometry is calibrated to the supplied empty jewel-case photograph.
-    const cx=S*.5000,cy=S*.5020,r=S*.4090,hubR=S*.1465;
+    const cx=S*.5010,cy=S*.4870,r=S*.4205,hubR=S*.1280;
 
     if(state.image){
       c.save();
@@ -376,7 +377,7 @@
       // uploaded artwork appears printed into the disc surface.
       c.globalCompositeOperation='overlay';
       c.globalAlpha=.98;
-      drawCoverImage(c,S,cx,cy,r*1.015);
+      drawCoverImage(c,S,cx,cy,r*1.012);
       c.restore();
     }
 

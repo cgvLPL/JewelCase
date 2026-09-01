@@ -59,12 +59,17 @@ jobs:
 
           rgba=np.dstack([a.astype(np.uint8),alpha])
           out=Image.fromarray(rgba,'RGBA')
+          # Canva's editable export is a 600x200 preview. Upscale cleanly for
+          # README/header use while preserving the restored alpha channel.
+          if out.size != (1800,600):
+              out=out.resize((1800,600),Image.Resampling.LANCZOS)
           out.save('assets/jewelcase-logo-transparent.png','PNG',optimize=True,compress_level=8)
 
-          transparent=(alpha==0).mean()
+          alpha2=np.asarray(out.getchannel('A'))
+          transparent=(alpha2==0).mean()
           print('size',out.size,'bg',tuple(int(x) for x in bg),'transparent_fraction',transparent)
-          assert out.size == (2172,724), out.size
-          assert alpha.min() == 0 and alpha.max() == 255
+          assert out.size == (1800,600), out.size
+          assert alpha2.min() == 0 and alpha2.max() == 255
           assert transparent > .20
           PY
 

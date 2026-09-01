@@ -312,54 +312,82 @@
 
   function drawCenteredHubText(c,S,cx,cy){
     const text='US PAT. 12/234567 - CAN PAT. 1234567 - EURO PAT. 1234567';
-    const radius=S*.0890;
-    const ringOuter=S*.1045;
-    const ringInner=S*.0715;
+    const cleanOuter=S*.1330;
+    const cleanInner=S*.0600;
+    const textRadius=S*.1020;
 
-    // Remove the perspective-shifted lettering baked into the source photo.
     c.save();
     c.beginPath();
-    c.arc(cx,cy,ringOuter,0,Math.PI*2);
-    c.arc(cx,cy,ringInner,0,Math.PI*2,true);
+    c.arc(cx,cy,cleanOuter,0,Math.PI*2);
+    c.arc(cx,cy,cleanInner,0,Math.PI*2,true);
     c.clip('evenodd');
-    c.fillStyle='rgba(4,4,6,.99)';
-    c.fillRect(cx-ringOuter,cy-ringOuter,ringOuter*2,ringOuter*2);
+    const hubBg=c.createRadialGradient(cx,cy,cleanInner,cx,cy,cleanOuter);
+    hubBg.addColorStop(0,'#050506');
+    hubBg.addColorStop(.68,'#09090b');
+    hubBg.addColorStop(1,'#040405');
+    c.fillStyle=hubBg;
+    c.fillRect(cx-cleanOuter,cy-cleanOuter,cleanOuter*2,cleanOuter*2);
+    c.restore();
+
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.beginPath();
+      c.arc(cx,cy,cleanInner,0,Math.PI*2);
+      c.clip();
+      c.globalCompositeOperation='source-over';
+      c.globalAlpha=1;
+      c.imageSmoothingEnabled=true;
+      c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
+    }
+
+    c.save();
+    c.lineWidth=Math.max(1,S*.00115);
+    c.strokeStyle='rgba(235,240,245,.16)';
+    circlePath(c,cx,cy,S*.1280); c.stroke();
+    c.strokeStyle='rgba(255,255,255,.08)';
+    circlePath(c,cx,cy,S*.0730); c.stroke();
     c.restore();
 
     c.save();
-    c.fillStyle='rgba(238,238,234,.88)';
+    c.fillStyle='rgba(232,232,228,.76)';
     c.textAlign='center';
     c.textBaseline='middle';
 
-    let fontPx=Math.max(7,S*.0078);
-    const tracking=S*.00042;
-    const maxArc=2.48; // centered across the upper arc only
+    let fontPx=S*.00735;
+    const minFont=S*.00635;
+    const tracking=S*.00018;
+    const maxArc=Math.PI*.94;
 
     function setFont(){
       c.font=`500 ${fontPx}px Arial, Helvetica, sans-serif`;
     }
-    function totalArc(){
-      let px=0;
-      for(const ch of text) px+=c.measureText(ch).width+tracking;
-      return Math.max(0,px-tracking)/radius;
+    function measureArc(){
+      let total=0;
+      for(const ch of text) total+=c.measureText(ch).width+tracking;
+      return Math.max(0,total-tracking)/textRadius;
     }
 
     setFont();
-    let arc=totalArc();
-    while(arc>maxArc && fontPx>S*.0058){
-      fontPx*=.96;
+    let arc=measureArc();
+    while(arc>maxArc && fontPx>minFont){
+      fontPx*=.985;
       setFont();
-      arc=totalArc();
+      arc=measureArc();
     }
 
-    // True concentric arc: the midpoint is exactly 12 o'clock.
-    let angle=-Math.PI/2-arc/2;
+    const naturalArc=arc;
+    const arcScale=naturalArc>maxArc ? maxArc/naturalArc : 1;
+    const usedArc=naturalArc*arcScale;
+    let angle=-Math.PI/2-usedArc/2;
+
     for(const ch of text){
       const w=c.measureText(ch).width;
-      const advance=(w+tracking)/radius;
+      const advance=((w+tracking)/textRadius)*arcScale;
       const a=angle+advance/2;
       c.save();
-      c.translate(cx+Math.cos(a)*radius,cy+Math.sin(a)*radius);
+      c.translate(cx+Math.cos(a)*textRadius,cy+Math.sin(a)*textRadius);
       c.rotate(a+Math.PI/2);
       c.fillText(ch,0,0);
       c.restore();

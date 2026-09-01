@@ -60,12 +60,16 @@
     .section{padding:17px 18px;border-bottom:1px solid var(--line)}
     .section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.13em;color:#b8b8c2;margin:0 0 13px}
     .upload{
-      border:1px dashed #45454f;border-radius:14px;padding:16px;text-align:center;background:#0d0d10;cursor:pointer;
-      transition:.18s border-color,.18s background
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      width:100%;min-height:118px;border:1px dashed #45454f;border-radius:14px;
+      padding:18px 16px;text-align:center;background:#0d0d10;cursor:pointer;
+      transition:.18s border-color,.18s background;overflow:hidden;
+      -webkit-tap-highlight-color:transparent
     }
     .upload:hover,.upload.over{border-color:var(--accent);background:#11140d}
-    .upload strong{display:block;font-size:13px;margin-bottom:4px}
-    .upload span{font-size:11px;color:var(--muted)}
+    .upload strong,.upload span{display:block;width:100%;text-align:center}
+    .upload strong{font-size:13px;line-height:1.35;margin:0 0 6px}
+    .upload span{font-size:11px;line-height:1.45;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
     .upload input{display:none}
     .presets{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
     .preset{
@@ -97,10 +101,15 @@
     .toast.show{opacity:1;transform:none}
     @media(max-width:900px){
       .app{grid-template-columns:1fr}
-      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line)}
+      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line);overflow:visible}
       .stage-wrap{padding:20px 14px}
       header{padding:0 14px}
       .stage-shell{width:min(92vw,760px)}
+      .section{padding:16px 14px}
+      .upload{min-height:124px;padding:20px 14px}
+      .presets{gap:10px;margin-top:12px}
+      .preset{min-width:0}
+      .footer-actions{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
     }
   </style>
 </head>

@@ -1,0 +1,114 @@
+name: Center hub patent text
+
+on:
+  push:
+    paths:
+      - ".github/workflows/center-hub-text.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  center-hub-text:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Replace photographed hub text with centered vector text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("index.html")
+          s = p.read_text()
+
+          anchor = "  function circlePath(c,x,y,r){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.closePath();}\n"
+          helper = r'''
+  function drawCenteredHubText(c,S,cx,cy){
+    const text='US PAT. 12/234567 CAN PAT. 1234567 EURO PAT. 1234567';
+    const start=Math.PI*.93;
+    const end=-Math.PI*.13;
+    const radius=S*.0890;
+
+    // Cover only the old photographed lettering, leaving the center lock
+    // and the surrounding clear plastic ring untouched.
+    c.save();
+    c.beginPath();
+    c.arc(cx,cy,S*.1045,0,Math.PI*2);
+    c.arc(cx,cy,S*.0715,0,Math.PI*2,true);
+    c.clip('evenodd');
+    c.fillStyle='rgba(4,4,6,.985)';
+    c.fillRect(cx-S*.11,cy-S*.11,S*.22,S*.22);
+    c.restore();
+
+    c.save();
+    c.fillStyle='rgba(236,236,232,.84)';
+    c.textAlign='center';
+    c.textBaseline='middle';
+    c.font=`500 ${Math.max(8,S*.0088)}px Arial, Helvetica, sans-serif`;
+
+    const chars=[...text];
+    const step=(end-start)/Math.max(1,chars.length-1);
+    chars.forEach((ch,i)=>{
+      const a=start+step*i;
+      c.save();
+      c.translate(cx+Math.cos(a)*radius,cy+Math.sin(a)*radius);
+      c.rotate(a+Math.PI/2);
+      c.fillText(ch,0,0);
+      c.restore();
+    });
+    c.restore();
+  }
+'''
+          if helper.strip() not in s:
+              if anchor not in s:
+                  raise SystemExit("circlePath anchor not found")
+              s = s.replace(anchor, anchor + helper, 1)
+
+          marker = """    // Restore the photographed center hub at full opacity so the molded
+    // patent text and locking ring stay perfectly centered and legible.
+    if(templateImage.complete && templateImage.naturalWidth){
+      c.save();
+      c.beginPath();
+      c.arc(cx,cy,hubProtectR,0,Math.PI*2);
+      c.clip();
+      c.globalCompositeOperation='source-over';
+      c.globalAlpha=1;
+      c.imageSmoothingEnabled=true;
+      c.imageSmoothingQuality='high';
+      c.drawImage(templateImage,0,0,S,S);
+      c.restore();
+    }
+"""
+          replacement = marker + """
+    // Redraw the small molded patent lettering as a true concentric arc.
+    // The photographed lettering is perspective-shifted, so this keeps the
+    // text visually centered on the actual hub at every output resolution.
+    drawCenteredHubText(c,S,cx,cy);
+"""
+          if "drawCenteredHubText(c,S,cx,cy);" not in s:
+              if marker not in s:
+                  raise SystemExit("hub restore block not found")
+              s = s.replace(marker, replacement, 1)
+
+          p.write_text(s)
+          PY
+
+      - name: Commit fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Center molded hub patent text"
+          git push

@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 'https://export-download.canva.com/0cd980cf-fdfe-4096-b49b-2ed5fba629a0/0/0001-2872685160945032295.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260831%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260831T111425Z&X-Amz-Expires=78979&X-Amz-Signature=b41a5db4aae94733f9f9d5951fcfa070cb02663e529b2513c437108bfe424f9b&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2001%20Sep%202026%2009%3A10%3A44%20GMT' -o /tmp/jewel-source.png
+          curl -L --fail --retry 3 'https://export-download.canva.com/ca8fd866-c475-496a-9b8e-162ef273ee72/0/0001-824673233115282435.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260831%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260831T090211Z&X-Amz-Expires=85575&X-Amz-Signature=9d989ab74142e9472032e80dbf5449146e58a5b6a04eaa98d36cfcd1f7ea5f3a&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2001%20Sep%202026%2008%3A48%3A26%20GMT' -o /tmp/jewel-source.png
           file /tmp/jewel-source.png
           test "$(wc -c < /tmp/jewel-source.png)" -gt 100000
 
@@ -36,11 +36,14 @@ jobs:
           from PIL import Image, ImageFilter
 
           src = Image.open('/tmp/jewel-source.png').convert('RGB')
-          if src.size[0] < 900 or src.size[1] < 900:
+          if src.size[0] < 500 or src.size[1] < 500:
               raise SystemExit(f'Unexpected source size: {src.size}')
 
-          out = src.resize((3000, 3000), Image.Resampling.LANCZOS)
-          out = out.filter(ImageFilter.UnsharpMask(radius=1.0, percent=85, threshold=3))
+          if src.size != (3000, 3000):
+              out = src.resize((3000, 3000), Image.Resampling.LANCZOS)
+              out = out.filter(ImageFilter.UnsharpMask(radius=1.0, percent=85, threshold=3))
+          else:
+              out = src
 
           dest = Path('assets/jewel-case-template-3000dpi.png')
           dest.parent.mkdir(parents=True, exist_ok=True)

@@ -362,8 +362,8 @@
   }
 
   function drawDisc(c,S){
-    // Geometry is calibrated to the supplied empty jewel-case photograph.
-    const cx=S*.5010,cy=S*.4870,r=S*.4205,hubR=S*.1280;
+    // Geometry is calibrated to the supplied 1024px jewel-case photograph, centered on the photographed hub.
+    const cx=S*.5000,cy=S*.4960,r=S*.4270,hubR=S*.1290;
 
     if(state.image){
       c.save();

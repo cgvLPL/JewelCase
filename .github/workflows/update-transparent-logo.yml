@@ -1,0 +1,54 @@
+name: Update transparent JewelCase logo
+
+on:
+  push:
+    paths:
+      - ".github/workflows/update-transparent-logo.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-logo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download generated transparent logo
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3             'https://export-download.canva.com/f7f21606-75dc-4ea0-9301-6b2a202df17f/0/0001-8771274810887293224.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260901%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260901T044558Z&X-Amz-Expires=44578&X-Amz-Signature=118c35400074587d6d634fe80695a7cd31d13fc70ce5eab235bd8e2e1c0e7b57&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2001%20Sep%202026%2017%3A08%3A56%20GMT'             -o assets/jewelcase-logo-transparent.png
+
+      - name: Verify transparency and dimensions
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image
+          im=Image.open('assets/jewelcase-logo-transparent.png')
+          assert im.mode in ('RGBA','LA'), im.mode
+          assert im.size == (2172,724), im.size
+          alpha=im.getchannel('A')
+          lo,hi=alpha.getextrema()
+          assert lo == 0 and hi == 255, (lo,hi)
+          print('logo', im.size, im.mode, 'alpha', (lo,hi))
+          PY
+
+      - name: Verify app and README use transparent logo
+        run: |
+          grep -Fq 'assets/jewelcase-logo-transparent.png' index.html
+          grep -Fq 'assets/jewelcase-logo-transparent.png' README.md
+
+      - name: Commit logo update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/jewelcase-logo-transparent.png
+          if git diff --cached --quiet; then
+            echo "No logo changes to commit."
+            exit 0
+          fi
+          git commit -m "Use generated transparent JewelCase logo"
+          git push

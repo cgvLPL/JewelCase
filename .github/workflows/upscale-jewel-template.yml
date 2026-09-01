@@ -22,7 +22,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 'https://export-download.canva.com/ca8fd866-c475-496a-9b8e-162ef273ee72/0/0001-824673233115282435.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260831%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260831T090211Z&X-Amz-Expires=85575&X-Amz-Signature=9d989ab74142e9472032e80dbf5449146e58a5b6a04eaa98d36cfcd1f7ea5f3a&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2001%20Sep%202026%2008%3A48%3A26%20GMT' -o /tmp/jewel-source.png
+          PRIMARY='https://media.canva.com/v2/image-resize/format:PNG/height:1024/quality:100/uri:ifs%3A%2F%2FM%2Fe05b48d3-d3c0-471b-90ac-c0f65614483a/watermark:F/width:1024?csig=AAAAAAAAAAAAAAAAAAAAADEw4eOmYQ4pFILBS9Qy90udmZxUPaKmUZ4Ejz75_fs5&exp=1788263351&osig=AAAAAAAAAAAAAAAAAAAAANsL8_FpFnlUzsNfo_u_ZD5NDxsC9ZtNjT2fXugjrmHr&signer=media-rpc&x-canva-quality=thumbnail'
+          FALLBACK='https://export-download.canva.com/ca8fd866-c475-496a-9b8e-162ef273ee72/0/0001-824673233115282435.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260831%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260831T090211Z&X-Amz-Expires=85575&X-Amz-Signature=9d989ab74142e9472032e80dbf5449146e58a5b6a04eaa98d36cfcd1f7ea5f3a&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2001%20Sep%202026%2008%3A48%3A26%20GMT'
+
+          if curl -L --fail --retry 2 "$PRIMARY" -o /tmp/jewel-source.png; then
+            echo "Downloaded original Canva asset path."
+          else
+            echo "Original asset transform unavailable; using rendered fallback."
+            curl -L --fail --retry 3 "$FALLBACK" -o /tmp/jewel-source.png
+          fi
           file /tmp/jewel-source.png
           test "$(wc -c < /tmp/jewel-source.png)" -gt 100000
 

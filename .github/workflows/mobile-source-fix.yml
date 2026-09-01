@@ -17,81 +17,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Patch mobile source/upload UI
-        shell: bash
+      - name: Patch mobile source UI
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("index.html")
-          s = p.read_text()
-
-          old = """    .upload{
-      border:1px dashed #45454f;border-radius:14px;padding:16px;text-align:center;background:#0d0d10;cursor:pointer;
-      transition:.18s border-color,.18s background
-    }
-    .upload:hover,.upload.over{border-color:var(--accent);background:#11140d}
-    .upload strong{display:block;font-size:13px;margin-bottom:4px}
-    .upload span{font-size:11px;color:var(--muted)}
-    .upload input{display:none}"""
-
-          new = """    .upload{
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      width:100%;min-height:118px;border:1px dashed #45454f;border-radius:14px;
-      padding:18px 16px;text-align:center;background:#0d0d10;cursor:pointer;
-      transition:.18s border-color,.18s background;overflow:hidden;
-      -webkit-tap-highlight-color:transparent
-    }
-    .upload:hover,.upload.over{border-color:var(--accent);background:#11140d}
-    .upload strong,.upload span{display:block;width:100%;text-align:center}
-    .upload strong{font-size:13px;line-height:1.35;margin:0 0 6px}
-    .upload span{font-size:11px;line-height:1.45;color:var(--muted);white-space:normal;overflow-wrap:anywhere}
-    .upload input{display:none}"""
-
-          if old not in s:
-              raise SystemExit("Upload CSS block not found")
-          s = s.replace(old, new, 1)
-
-          old_media = """    @media(max-width:900px){
-      .app{grid-template-columns:1fr}
-      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line)}
-      .stage-wrap{padding:20px 14px}
-      header{padding:0 14px}
-      .stage-shell{width:min(92vw,760px)}
-    }"""
-
-          new_media = """    @media(max-width:900px){
-      .app{grid-template-columns:1fr}
-      aside{position:relative;height:auto;border-left:0;border-top:1px solid var(--line);overflow:visible}
-      .stage-wrap{padding:20px 14px}
-      header{padding:0 14px}
-      .stage-shell{width:min(92vw,760px)}
-      .section{padding:16px 14px}
-      .upload{min-height:124px;padding:20px 14px}
-      .presets{gap:10px;margin-top:12px}
-      .preset{min-width:0}
-      .footer-actions{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-    }"""
-
-          if old_media not in s:
-              raise SystemExit("Mobile media block not found")
-          s = s.replace(old_media, new_media, 1)
-
-          p.write_text(s)
-          PY
-
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgiaW5kZXguaHRtbCIpCnM9cC5yZWFkX3RleHQoKQpvbGQ9JycnICAgIC51cGxvYWR7CiAgICAgIGJvcmRlcjoxcHggZGFzaGVkICM0NTQ1NGY7Ym9yZGVyLXJhZGl1czoxNHB4O3BhZGRpbmc6MTZweDt0ZXh0LWFsaWduOmNlbnRlcjtiYWNrZ3JvdW5kOiMwZDBkMTA7Y3Vyc29yOnBvaW50ZXI7CiAgICAgIHRyYW5zaXRpb246LjE4cyBib3JkZXItY29sb3IsLjE4cyBiYWNrZ3JvdW5kCiAgICB9CiAgICAudXBsb2FkOmhvdmVyLC51cGxvYWQub3Zlcntib3JkZXItY29sb3I6dmFyKC0tYWNjZW50KTtiYWNrZ3JvdW5kOiMxMTE0MGR9CiAgICAudXBsb2FkIHN0cm9uZ3tkaXNwbGF5OmJsb2NrO2ZvbnQtc2l6ZToxM3B4O21hcmdpbi1ib3R0b206NHB4fQogICAgLnVwbG9hZCBzcGFue2ZvbnQtc2l6ZToxMXB4O2NvbG9yOnZhcigtLW11dGVkKX0KICAgIC51cGxvYWQgaW5wdXR7ZGlzcGxheTpub25lfScnJwpuZXc9JycnICAgIC51cGxvYWR7CiAgICAgIGRpc3BsYXk6ZmxleDtmbGV4LWRpcmVjdGlvbjpjb2x1bW47YWxpZ24taXRlbXM6Y2VudGVyO2p1c3RpZnktY29udGVudDpjZW50ZXI7CiAgICAgIHdpZHRoOjEwMCU7bWluLWhlaWdodDoxMThweDtib3JkZXI6MXB4IGRhc2hlZCAjNDU0NTRmO2JvcmRlci1yYWRpdXM6MTRweDsKICAgICAgcGFkZGluZzoxOHB4IDE2cHg7dGV4dC1hbGlnbjpjZW50ZXI7YmFja2dyb3VuZDojMGQwZDEwO2N1cnNvcjpwb2ludGVyOwogICAgICB0cmFuc2l0aW9uOi4xOHMgYm9yZGVyLWNvbG9yLC4xOHMgYmFja2dyb3VuZDtvdmVyZmxvdzpoaWRkZW47CiAgICAgIC13ZWJraXQtdGFwLWhpZ2hsaWdodC1jb2xvcjp0cmFuc3BhcmVudAogICAgfQogICAgLnVwbG9hZDpob3ZlciwudXBsb2FkLm92ZXJ7Ym9yZGVyLWNvbG9yOnZhcigtLWFjY2VudCk7YmFja2dyb3VuZDojMTExNDBkfQogICAgLnVwbG9hZCBzdHJvbmcsLnVwbG9hZCBzcGFue2Rpc3BsYXk6YmxvY2s7d2lkdGg6MTAwJTt0ZXh0LWFsaWduOmNlbnRlcn0KICAgIC51cGxvYWQgc3Ryb25ne2ZvbnQtc2l6ZToxM3B4O2xpbmUtaGVpZ2h0OjEuMzU7bWFyZ2luOjAgMCA2cHh9CiAgICAudXBsb2FkIHNwYW57Zm9udC1zaXplOjExcHg7bGluZS1oZWlnaHQ6MS40NTtjb2xvcjp2YXIoLS1tdXRlZCk7d2hpdGUtc3BhY2U6bm9ybWFsO292ZXJmbG93LXdyYXA6YW55d2hlcmV9CiAgICAudXBsb2FkIGlucHV0e2Rpc3BsYXk6bm9uZX0nJycKaWYgb2xkIG5vdCBpbiBzOiByYWlzZSBTeXN0ZW1FeGl0KCJVcGxvYWQgQ1NTIGJsb2NrIG5vdCBmb3VuZCIpCnM9cy5yZXBsYWNlKG9sZCxuZXcsMSkKb2xkbT0nJycgICAgQG1lZGlhKG1heC13aWR0aDo5MDBweCl7CiAgICAgIC5hcHB7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmcn0KICAgICAgYXNpZGV7cG9zaXRpb246cmVsYXRpdmU7aGVpZ2h0OmF1dG87Ym9yZGVyLWxlZnQ6MDtib3JkZXItdG9wOjFweCBzb2xpZCB2YXIoLS1saW5lKX0KICAgICAgLnN0YWdlLXdyYXB7cGFkZGluZzoyMHB4IDE0cHh9CiAgICAgIGhlYWRlcntwYWRkaW5nOjAgMTRweH0KICAgICAgLnN0YWdlLXNoZWxse3dpZHRoOm1pbig5MnZ3LDc2MHB4KX0KICAgIH0nJycKbmV3bT0nJycgICAgQG1lZGlhKG1heC13aWR0aDo5MDBweCl7CiAgICAgIC5hcHB7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmcn0KICAgICAgYXNpZGV7cG9zaXRpb246cmVsYXRpdmU7aGVpZ2h0OmF1dG87Ym9yZGVyLWxlZnQ6MDtib3JkZXItdG9wOjFweCBzb2xpZCB2YXIoLS1saW5lKTtvdmVyZmxvdzp2aXNpYmxlfQogICAgICAuc3RhZ2Utd3JhcHtwYWRkaW5nOjIwcHggMTRweH0KICAgICAgaGVhZGVye3BhZGRpbmc6MCAxNHB4fQogICAgICAuc3RhZ2Utc2hlbGx7d2lkdGg6bWluKDkydncsNzYwcHgpfQogICAgICAuc2VjdGlvbntwYWRkaW5nOjE2cHggMTRweH0KICAgICAgLnVwbG9hZHttaW4taGVpZ2h0OjEyNHB4O3BhZGRpbmc6MjBweCAxNHB4fQogICAgICAucHJlc2V0c3tnYXA6MTBweDttYXJnaW4tdG9wOjEycHh9CiAgICAgIC5wcmVzZXR7bWluLXdpZHRoOjB9CiAgICAgIC5mb290ZXItYWN0aW9uc3twYWRkaW5nLWJvdHRvbTpjYWxjKDE4cHggKyBlbnYoc2FmZS1hcmVhLWluc2V0LWJvdHRvbSkpfQogICAgfScnJwppZiBvbGRtIG5vdCBpbiBzOiByYWlzZSBTeXN0ZW1FeGl0KCJNb2JpbGUgbWVkaWEgYmxvY2sgbm90IGZvdW5kIikKcz1zLnJlcGxhY2Uob2xkbSxuZXdtLDEpCnAud3JpdGVfdGV4dChzKQo=' | base64 -d > /tmp/fix.py
+          python3 /tmp/fix.py
       - name: Commit fix
-        shell: bash
         run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "Fix mobile source upload layout"
           git push

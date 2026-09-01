@@ -17,98 +17,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Replace photographed hub text with centered vector text
-        shell: bash
+      - name: Center molded hub text
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("index.html")
-          s = p.read_text()
-
-          anchor = "  function circlePath(c,x,y,r){c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.closePath();}\n"
-          helper = r'''
-  function drawCenteredHubText(c,S,cx,cy){
-    const text='US PAT. 12/234567 CAN PAT. 1234567 EURO PAT. 1234567';
-    const start=Math.PI*.93;
-    const end=-Math.PI*.13;
-    const radius=S*.0890;
-
-    // Cover only the old photographed lettering, leaving the center lock
-    // and the surrounding clear plastic ring untouched.
-    c.save();
-    c.beginPath();
-    c.arc(cx,cy,S*.1045,0,Math.PI*2);
-    c.arc(cx,cy,S*.0715,0,Math.PI*2,true);
-    c.clip('evenodd');
-    c.fillStyle='rgba(4,4,6,.985)';
-    c.fillRect(cx-S*.11,cy-S*.11,S*.22,S*.22);
-    c.restore();
-
-    c.save();
-    c.fillStyle='rgba(236,236,232,.84)';
-    c.textAlign='center';
-    c.textBaseline='middle';
-    c.font=`500 ${Math.max(8,S*.0088)}px Arial, Helvetica, sans-serif`;
-
-    const chars=[...text];
-    const step=(end-start)/Math.max(1,chars.length-1);
-    chars.forEach((ch,i)=>{
-      const a=start+step*i;
-      c.save();
-      c.translate(cx+Math.cos(a)*radius,cy+Math.sin(a)*radius);
-      c.rotate(a+Math.PI/2);
-      c.fillText(ch,0,0);
-      c.restore();
-    });
-    c.restore();
-  }
-'''
-          if helper.strip() not in s:
-              if anchor not in s:
-                  raise SystemExit("circlePath anchor not found")
-              s = s.replace(anchor, anchor + helper, 1)
-
-          marker = """    // Restore the photographed center hub at full opacity so the molded
-    // patent text and locking ring stay perfectly centered and legible.
-    if(templateImage.complete && templateImage.naturalWidth){
-      c.save();
-      c.beginPath();
-      c.arc(cx,cy,hubProtectR,0,Math.PI*2);
-      c.clip();
-      c.globalCompositeOperation='source-over';
-      c.globalAlpha=1;
-      c.imageSmoothingEnabled=true;
-      c.imageSmoothingQuality='high';
-      c.drawImage(templateImage,0,0,S,S);
-      c.restore();
-    }
-"""
-          replacement = marker + """
-    // Redraw the small molded patent lettering as a true concentric arc.
-    // The photographed lettering is perspective-shifted, so this keeps the
-    // text visually centered on the actual hub at every output resolution.
-    drawCenteredHubText(c,S,cx,cy);
-"""
-          if "drawCenteredHubText(c,S,cx,cy);" not in s:
-              if marker not in s:
-                  raise SystemExit("hub restore block not found")
-              s = s.replace(marker, replacement, 1)
-
-          p.write_text(s)
-          PY
-
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgiaW5kZXguaHRtbCIpCnM9cC5yZWFkX3RleHQoKQoKYW5jaG9yPSIgIGZ1bmN0aW9uIGNpcmNsZVBhdGgoYyx4LHkscil7Yy5iZWdpblBhdGgoKTtjLmFyYyh4LHksciwwLE1hdGguUEkqMik7Yy5jbG9zZVBhdGgoKTt9XG4iCmhlbHBlcj1yIiIiCiAgZnVuY3Rpb24gZHJhd0NlbnRlcmVkSHViVGV4dChjLFMsY3gsY3kpewogICAgY29uc3QgdGV4dD0nVVMgUEFULiAxMi8yMzQ1NjcgQ0FOIFBBVC4gMTIzNDU2NyBFVVJPIFBBVC4gMTIzNDU2Nyc7CiAgICBjb25zdCBzdGFydD1NYXRoLlBJKi45MzsKICAgIGNvbnN0IGVuZD0tTWF0aC5QSSouMTM7CiAgICBjb25zdCByYWRpdXM9UyouMDg5MDsKCiAgICBjLnNhdmUoKTsKICAgIGMuYmVnaW5QYXRoKCk7CiAgICBjLmFyYyhjeCxjeSxTKi4xMDQ1LDAsTWF0aC5QSSoyKTsKICAgIGMuYXJjKGN4LGN5LFMqLjA3MTUsMCxNYXRoLlBJKjIsdHJ1ZSk7CiAgICBjLmNsaXAoJ2V2ZW5vZGQnKTsKICAgIGMuZmlsbFN0eWxlPSdyZ2JhKDQsNCw2LC45ODUpJzsKICAgIGMuZmlsbFJlY3QoY3gtUyouMTEsY3ktUyouMTEsUyouMjIsUyouMjIpOwogICAgYy5yZXN0b3JlKCk7CgogICAgYy5zYXZlKCk7CiAgICBjLmZpbGxTdHlsZT0ncmdiYSgyMzYsMjM2LDIzMiwuODQpJzsKICAgIGMudGV4dEFsaWduPSdjZW50ZXInOwogICAgYy50ZXh0QmFzZWxpbmU9J21pZGRsZSc7CiAgICBjLmZvbnQ9YDUwMCAke01hdGgubWF4KDgsUyouMDA4OCl9cHggQXJpYWwsIEhlbHZldGljYSwgc2Fucy1zZXJpZmA7CiAgICBjb25zdCBjaGFycz1bLi4udGV4dF07CiAgICBjb25zdCBzdGVwPShlbmQtc3RhcnQpL01hdGgubWF4KDEsY2hhcnMubGVuZ3RoLTEpOwogICAgY2hhcnMuZm9yRWFjaCgoY2gsaSk9PnsKICAgICAgY29uc3QgYT1zdGFydCtzdGVwKmk7CiAgICAgIGMuc2F2ZSgpOwogICAgICBjLnRyYW5zbGF0ZShjeCtNYXRoLmNvcyhhKSpyYWRpdXMsY3krTWF0aC5zaW4oYSkqcmFkaXVzKTsKICAgICAgYy5yb3RhdGUoYStNYXRoLlBJLzIpOwogICAgICBjLmZpbGxUZXh0KGNoLDAsMCk7CiAgICAgIGMucmVzdG9yZSgpOwogICAgfSk7CiAgICBjLnJlc3RvcmUoKTsKICB9CiIiIgppZiAiZnVuY3Rpb24gZHJhd0NlbnRlcmVkSHViVGV4dCIgbm90IGluIHM6CiAgICBpZiBhbmNob3Igbm90IGluIHM6CiAgICAgICAgcmFpc2UgU3lzdGVtRXhpdCgiY2lyY2xlUGF0aCBhbmNob3Igbm90IGZvdW5kIikKICAgIHM9cy5yZXBsYWNlKGFuY2hvcixhbmNob3IraGVscGVyLDEpCgptYXJrZXI9IiIiICAgIC8vIFJlc3RvcmUgdGhlIHBob3RvZ3JhcGhlZCBjZW50ZXIgaHViIGF0IGZ1bGwgb3BhY2l0eSBzbyB0aGUgbW9sZGVkCiAgICAvLyBwYXRlbnQgdGV4dCBhbmQgbG9ja2luZyByaW5nIHN0YXkgcGVyZmVjdGx5IGNlbnRlcmVkIGFuZCBsZWdpYmxlLgogICAgaWYodGVtcGxhdGVJbWFnZS5jb21wbGV0ZSAmJiB0ZW1wbGF0ZUltYWdlLm5hdHVyYWxXaWR0aCl7CiAgICAgIGMuc2F2ZSgpOwogICAgICBjLmJlZ2luUGF0aCgpOwogICAgICBjLmFyYyhjeCxjeSxodWJQcm90ZWN0UiwwLE1hdGguUEkqMik7CiAgICAgIGMuY2xpcCgpOwogICAgICBjLmdsb2JhbENvbXBvc2l0ZU9wZXJhdGlvbj0nc291cmNlLW92ZXInOwogICAgICBjLmdsb2JhbEFscGhhPTE7CiAgICAgIGMuaW1hZ2VTbW9vdGhpbmdFbmFibGVkPXRydWU7CiAgICAgIGMuaW1hZ2VTbW9vdGhpbmdRdWFsaXR5PSdoaWdoJzsKICAgICAgYy5kcmF3SW1hZ2UodGVtcGxhdGVJbWFnZSwwLDAsUyxTKTsKICAgICAgYy5yZXN0b3JlKCk7CiAgICB9CiIiIgphZGRpdGlvbj0iIiIKICAgIC8vIFJlZHJhdyB0aGUgc21hbGwgbW9sZGVkIHBhdGVudCBsZXR0ZXJpbmcgYXMgYSB0cnVlIGNvbmNlbnRyaWMgYXJjLgogICAgZHJhd0NlbnRlcmVkSHViVGV4dChjLFMsY3gsY3kpOwoiIiIKaWYgImRyYXdDZW50ZXJlZEh1YlRleHQoYyxTLGN4LGN5KTsiIG5vdCBpbiBzOgogICAgaWYgbWFya2VyIG5vdCBpbiBzOgogICAgICAgIHJhaXNlIFN5c3RlbUV4aXQoImh1YiByZXN0b3JlIGJsb2NrIG5vdCBmb3VuZCIpCiAgICBzPXMucmVwbGFjZShtYXJrZXIsbWFya2VyK2FkZGl0aW9uLDEpCgpwLndyaXRlX3RleHQocykK' | base64 -d > /tmp/fix.py
+          python3 /tmp/fix.py
       - name: Commit fix
-        shell: bash
         run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html
-          if git diff --cached --quiet; then
-            exit 0
-          fi
+          if git diff --cached --quiet; then exit 0; fi
           git commit -m "Center molded hub patent text"
           git push

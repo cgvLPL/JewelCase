@@ -1,0 +1,124 @@
+name: Build 3000 DPI jewel-case template
+
+on:
+  push:
+    paths:
+      - ".github/workflows/upscale-jewel-template.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download supplied jewel-case source
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 'https://export-download.canva.com/0cd980cf-fdfe-4096-b49b-2ed5fba629a0/0/0001-2872685160945032295.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH5AO7UJ26%2F20260831%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260831T111425Z&X-Amz-Expires=78979&X-Amz-Signature=b41a5db4aae94733f9f9d5951fcfa070cb02663e529b2513c437108bfe424f9b&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Tue%2C%2001%20Sep%202026%2009%3A10%3A44%20GMT' -o /tmp/jewel-source.png
+          file /tmp/jewel-source.png
+          test "$(wc -c < /tmp/jewel-source.png)" -gt 100000
+
+      - name: Upscale to 3000 x 3000 at 3000 DPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageFilter
+
+          src = Image.open('/tmp/jewel-source.png').convert('RGB')
+          if src.size[0] < 900 or src.size[1] < 900:
+              raise SystemExit(f'Unexpected source size: {src.size}')
+
+          out = src.resize((3000, 3000), Image.Resampling.LANCZOS)
+          out = out.filter(ImageFilter.UnsharpMask(radius=1.0, percent=85, threshold=3))
+
+          dest = Path('assets/jewel-case-template-3000dpi.png')
+          dest.parent.mkdir(parents=True, exist_ok=True)
+          out.save(dest, 'PNG', dpi=(3000, 3000), optimize=True, compress_level=8)
+          print('source:', src.size)
+          print('output:', out.size)
+          print('bytes:', dest.stat().st_size)
+          PY
+
+      - name: Calibrate renderer to supplied template
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('index.html')
+          s = p.read_text()
+
+          for old in [
+              "templateImage.src = 'assets/jewel-case-template.png';",
+              "templateImage.src = 'assets/jewel-case-template.avif';",
+              "templateImage.src = 'assets/jewel-case-template-3000dpi.png';"
+          ]:
+              if old in s:
+                  s = s.replace(old, "templateImage.src = 'assets/jewel-case-template-3000dpi.png';", 1)
+                  break
+
+          geometries = [
+              "const cx=S*.5000,cy=S*.5020,r=S*.4090,hubR=S*.1465;",
+              "const cx=S*.5000,cy=S*.4960,r=S*.4125,hubR=S*.1415;",
+              "const cx=S*.500,cy=S*.495,r=S*.409,hubR=S*.145;"
+          ]
+          target = "const cx=S*.5010,cy=S*.4870,r=S*.4205,hubR=S*.1280;"
+          for old in geometries:
+              if old in s:
+                  s = s.replace(old, target, 1)
+                  break
+          if target not in s:
+              raise SystemExit('Disc geometry block not found')
+
+          s = s.replace("drawCoverImage(c,S,cx,cy,r*1.015);", "drawCoverImage(c,S,cx,cy,r*1.012);")
+
+          s = s.replace(
+              '<option value="2048" selected>2048 × 2048</option>',
+              '<option value="2048">2048 × 2048</option>\n          <option value="3000" selected>3000 × 3000</option>'
+          )
+          if '<option value="3000" selected>3000 × 3000</option>' not in s:
+              raise SystemExit('Could not add 3000px export option')
+
+          p.write_text(s)
+          PY
+
+      - name: Verify template metadata
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from PIL import Image
+          im = Image.open('assets/jewel-case-template-3000dpi.png')
+          print('size:', im.size)
+          print('dpi:', im.info.get('dpi'))
+          if im.size != (3000, 3000):
+              raise SystemExit('Template dimensions are wrong')
+          dpi = im.info.get('dpi', (0, 0))
+          if dpi[0] < 2990 or dpi[1] < 2990:
+              raise SystemExit(f'DPI metadata is wrong: {dpi}')
+          PY
+
+      - name: Commit template update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/jewel-case-template-3000dpi.png index.html
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Use supplied 3000 DPI jewel-case template"
+          git push

@@ -329,19 +329,6 @@
     c.fillRect(cx-cleanOuter,cy-cleanOuter,cleanOuter*2,cleanOuter*2);
     c.restore();
 
-    if(templateImage.complete && templateImage.naturalWidth){
-      c.save();
-      c.beginPath();
-      c.arc(cx,cy,cleanInner,0,Math.PI*2);
-      c.clip();
-      c.globalCompositeOperation='source-over';
-      c.globalAlpha=1;
-      c.imageSmoothingEnabled=true;
-      c.imageSmoothingQuality='high';
-      c.drawImage(templateImage,0,0,S,S);
-      c.restore();
-    }
-
     c.save();
     c.lineWidth=Math.max(1,S*.00115);
     c.strokeStyle='rgba(235,240,245,.16)';
@@ -393,6 +380,119 @@
       c.restore();
       angle+=advance;
     }
+    c.restore();
+  }
+
+  function drawCenterLockHub(c,S,cx,cy){
+    const outerR=S*.0660;
+    const seatR=S*.0565;
+    const holeR=S*.0335;
+    const toothOuter=S*.0550;
+    const toothInner=S*.0370;
+    const toothHalf=.155;
+    const teeth=8;
+
+    c.save();
+
+    // Raised black/clear plastic hub seat.
+    const base=c.createRadialGradient(cx-S*.012,cy-S*.014,S*.010,cx,cy,outerR);
+    base.addColorStop(0,'rgba(38,40,45,.98)');
+    base.addColorStop(.46,'rgba(17,18,22,.99)');
+    base.addColorStop(.82,'rgba(6,7,9,1)');
+    base.addColorStop(1,'rgba(1,1,2,1)');
+    c.fillStyle=base;
+    circlePath(c,cx,cy,outerR);
+    c.fill();
+
+    // Outer molded lip and inner seat ring.
+    c.lineWidth=Math.max(1,S*.0015);
+    c.strokeStyle='rgba(245,248,250,.28)';
+    circlePath(c,cx,cy,outerR);
+    c.stroke();
+    c.strokeStyle='rgba(255,255,255,.12)';
+    circlePath(c,cx,cy,seatR);
+    c.stroke();
+
+    // Subtle lower-right shadow for depth.
+    c.save();
+    c.translate(S*.0016,S*.0022);
+    c.lineWidth=Math.max(1,S*.0022);
+    c.strokeStyle='rgba(0,0,0,.72)';
+    circlePath(c,cx,cy,seatR*.97);
+    c.stroke();
+    c.restore();
+
+    // Eight flexible retaining fingers like a real jewel-case spindle hub.
+    for(let i=0;i<teeth;i++){
+      const a=-Math.PI/2+i*(Math.PI*2/teeth);
+      const ao1=a-toothHalf, ao2=a+toothHalf;
+      const ai1=a-toothHalf*.58, ai2=a+toothHalf*.58;
+
+      const p1=[cx+Math.cos(ao1)*toothOuter,cy+Math.sin(ao1)*toothOuter];
+      const p2=[cx+Math.cos(ai1)*toothInner,cy+Math.sin(ai1)*toothInner];
+      const p3=[cx+Math.cos(ai2)*toothInner,cy+Math.sin(ai2)*toothInner];
+      const p4=[cx+Math.cos(ao2)*toothOuter,cy+Math.sin(ao2)*toothOuter];
+
+      c.beginPath();
+      c.moveTo(p1[0],p1[1]);
+      c.lineTo(p2[0],p2[1]);
+      c.quadraticCurveTo(
+        cx+Math.cos(a)*holeR*.92,
+        cy+Math.sin(a)*holeR*.92,
+        p3[0],p3[1]
+      );
+      c.lineTo(p4[0],p4[1]);
+      c.quadraticCurveTo(
+        cx+Math.cos(a)*toothOuter*1.035,
+        cy+Math.sin(a)*toothOuter*1.035,
+        p1[0],p1[1]
+      );
+      c.closePath();
+
+      const gx=cx+Math.cos(a)*toothOuter*.35;
+      const gy=cy+Math.sin(a)*toothOuter*.35;
+      const tg=c.createRadialGradient(gx-S*.006,gy-S*.006,S*.002,gx,gy,toothOuter*.85);
+      tg.addColorStop(0,'rgba(205,210,216,.78)');
+      tg.addColorStop(.38,'rgba(105,110,118,.72)');
+      tg.addColorStop(.78,'rgba(35,38,44,.94)');
+      tg.addColorStop(1,'rgba(8,9,12,.98)');
+      c.fillStyle=tg;
+      c.fill();
+      c.lineWidth=Math.max(.8,S*.00075);
+      c.strokeStyle='rgba(235,238,242,.34)';
+      c.stroke();
+
+      // Thin crease at each finger root.
+      c.beginPath();
+      c.moveTo(
+        cx+Math.cos(a-toothHalf*.78)*toothOuter*.92,
+        cy+Math.sin(a-toothHalf*.78)*toothOuter*.92
+      );
+      c.lineTo(
+        cx+Math.cos(a+toothHalf*.78)*toothOuter*.92,
+        cy+Math.sin(a+toothHalf*.78)*toothOuter*.92
+      );
+      c.strokeStyle='rgba(0,0,0,.46)';
+      c.lineWidth=Math.max(.7,S*.00055);
+      c.stroke();
+    }
+
+    // True center aperture.
+    c.fillStyle='#010102';
+    circlePath(c,cx,cy,holeR);
+    c.fill();
+    c.lineWidth=Math.max(1,S*.0011);
+    c.strokeStyle='rgba(245,247,250,.32)';
+    circlePath(c,cx,cy,holeR);
+    c.stroke();
+
+    // Highlight arc on the molded hub lip.
+    c.beginPath();
+    c.arc(cx,cy,outerR*.94,Math.PI*1.04,Math.PI*1.82);
+    c.lineWidth=Math.max(1,S*.00105);
+    c.strokeStyle='rgba(255,255,255,.22)';
+    c.stroke();
+
     c.restore();
   }
 
@@ -580,6 +680,9 @@
 
     // Redraw the small molded patent lettering as a true concentric arc.
     drawCenteredHubText(c,S,cx,cy);
+
+    // Add a realistic jewel-case spindle lock above the molded hub ring.
+    drawCenterLockHub(c,S,cx,cy);
   }
 
   function seeded(seed){

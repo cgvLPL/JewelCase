@@ -654,25 +654,60 @@
       c.restore();
     }
 
-    // Optional color finish lives below the photographed specular layer.
+    // Disc finish is intentionally visible at normal slider values. The finish
+    // stays inside the printable disc area and never covers the photographed hub.
     const rgb=discColors[state.discStyle]||discColors.clear;
-    const alpha=(state.discOpacity/100)*(state.discStyle==='clear'?.32:1);
-    if(alpha>0){
-      c.save();
-      c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);c.clip('evenodd');
-      c.globalCompositeOperation=state.discStyle==='black'?'multiply':'soft-light';
-      c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;
-      c.fillRect(cx-r,cy-r,r*2,r*2);
-      if(state.discStyle==='iridescent'){
-        const rainbow=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
-        rainbow.addColorStop(0,'rgba(255,70,150,.22)');
-        rainbow.addColorStop(.32,'rgba(80,120,255,.16)');
-        rainbow.addColorStop(.67,'rgba(80,255,205,.16)');
-        rainbow.addColorStop(1,'rgba(255,215,85,.18)');
-        c.fillStyle=rainbow;c.fillRect(cx-r,cy-r,r*2,r*2);
+    const strength=Math.max(0,Math.min(1,state.discOpacity/75));
+    c.save();
+    c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);c.clip('evenodd');
+
+    if(state.discStyle==='clear'){
+      // Clear keeps the artwork neutral but adds a controllable glassy cool sheen.
+      if(strength>0){
+        const clearSheen=c.createRadialGradient(cx-r*.28,cy-r*.34,r*.06,cx,cy,r);
+        clearSheen.addColorStop(0,`rgba(238,248,255,${.10*strength})`);
+        clearSheen.addColorStop(.48,`rgba(155,190,215,${.055*strength})`);
+        clearSheen.addColorStop(1,'rgba(120,145,165,0)');
+        c.globalCompositeOperation='screen';
+        c.fillStyle=clearSheen;c.fillRect(cx-r,cy-r,r*2,r*2);
       }
-      c.restore();
+    } else if(state.discStyle==='black'){
+      c.globalCompositeOperation='multiply';
+      c.fillStyle=`rgba(4,4,7,${.18+.62*strength})`;
+      c.fillRect(cx-r,cy-r,r*2,r*2);
+    } else if(state.discStyle==='smoke'){
+      c.globalCompositeOperation='multiply';
+      c.fillStyle=`rgba(24,27,34,${.12+.46*strength})`;
+      c.fillRect(cx-r,cy-r,r*2,r*2);
+      c.globalCompositeOperation='screen';
+      const smokeGlow=c.createLinearGradient(cx-r,cy-r,cx+r,cy+r);
+      smokeGlow.addColorStop(0,`rgba(135,145,160,${.06+.08*strength})`);
+      smokeGlow.addColorStop(1,'rgba(255,255,255,0)');
+      c.fillStyle=smokeGlow;c.fillRect(cx-r,cy-r,r*2,r*2);
+    } else if(state.discStyle==='iridescent'){
+      c.globalCompositeOperation='soft-light';
+      const rainbow=c.createLinearGradient(cx-r*.9,cy-r,cx+r*.9,cy+r);
+      rainbow.addColorStop(0,`rgba(255,74,157,${.18+.30*strength})`);
+      rainbow.addColorStop(.30,`rgba(87,124,255,${.16+.28*strength})`);
+      rainbow.addColorStop(.62,`rgba(73,255,207,${.15+.27*strength})`);
+      rainbow.addColorStop(1,`rgba(255,219,88,${.17+.28*strength})`);
+      c.fillStyle=rainbow;c.fillRect(cx-r,cy-r,r*2,r*2);
+      c.globalCompositeOperation='screen';
+      c.globalAlpha=.18+.28*strength;
+      c.fillStyle='rgba(255,255,255,.34)';
+      c.beginPath();c.ellipse(cx-r*.18,cy-r*.20,r*.72,r*.13,-.63,0,Math.PI*2);c.fill();
+    } else {
+      // Purple and pink get a saturated translucent lacquer rather than a
+      // barely-visible soft-light wash.
+      c.globalCompositeOperation='soft-light';
+      c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${.26+.50*strength})`;
+      c.fillRect(cx-r,cy-r,r*2,r*2);
+      c.globalCompositeOperation='screen';
+      c.globalAlpha=.10+.16*strength;
+      c.fillStyle=`rgba(${Math.min(255,rgb[0]+110)},${Math.min(255,rgb[1]+110)},${Math.min(255,rgb[2]+110)},.55)`;
+      c.beginPath();c.ellipse(cx-r*.20,cy-r*.24,r*.68,r*.12,-.58,0,Math.PI*2);c.fill();
     }
+    c.restore();
 
     if(state.grooves){
       c.save();
@@ -719,25 +754,62 @@
   }
 
   function drawCase(c,S){
-    // The physical jewel case now comes from the supplied photographic template.
-    // These controls only add optional aging on top; they no longer redraw it.
-    if(state.caseStyle==='worn' && state.scratches){
-      c.save();c.lineCap='round';
-      const amount=Math.round(18+state.grain*.35);
-      for(let i=0;i<amount;i++){
-        const x=seeded(i+2)*S,y=seeded(i+55)*S,len=(.025+seeded(i+9)*.12)*S,ang=(-.9+seeded(i+91)*1.8);
-        c.strokeStyle=`rgba(255,255,255,${.025+seeded(i+7)*.07})`;
-        c.lineWidth=Math.max(.7,S*.00075);
-        c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);c.stroke();
+    if(state.caseStyle==='template')return;
+
+    // Case treatments are clipped OUTSIDE the disc, so changing the Case
+    // selector visibly changes the jewel-case plastic without recoloring the CD.
+    const cx=S*.5030,cy=S*.4980,discR=S*.4050;
+    c.save();
+    c.beginPath();
+    c.rect(0,0,S,S);
+    c.arc(cx,cy,discR,0,Math.PI*2,true);
+    c.clip('evenodd');
+
+    if(state.caseStyle==='clean'){
+      // Cleaner plastic: brighter acrylic, lower apparent grime, crisper rails.
+      if(templateImage.complete && templateImage.naturalWidth){
+        c.save();
+        c.filter='brightness(1.14) contrast(.90) saturate(.82)';
+        c.globalCompositeOperation='screen';
+        c.globalAlpha=.34;
+        c.drawImage(templateImage,0,0,S,S);
+        c.restore();
       }
-      c.restore();
-    } else if(state.caseStyle==='clean'){
-      c.save();
-      c.globalCompositeOperation='soft-light';
-      c.fillStyle='rgba(255,255,255,.045)';
+      c.globalCompositeOperation='screen';
+      const polish=c.createLinearGradient(0,0,S,S);
+      polish.addColorStop(0,'rgba(255,255,255,.10)');
+      polish.addColorStop(.48,'rgba(210,225,235,.025)');
+      polish.addColorStop(1,'rgba(255,255,255,.075)');
+      c.fillStyle=polish;c.fillRect(0,0,S,S);
+    } else if(state.caseStyle==='worn'){
+      // Worn plastic: darker/yellower acrylic plus edge grime and scratches.
+      c.globalCompositeOperation='multiply';
+      c.fillStyle='rgba(71,62,48,.25)';
       c.fillRect(0,0,S,S);
-      c.restore();
+      c.globalCompositeOperation='soft-light';
+      c.fillStyle='rgba(105,78,48,.20)';
+      c.fillRect(0,0,S,S);
+
+      if(state.scratches){
+        c.globalCompositeOperation='screen';
+        c.lineCap='round';
+        const amount=Math.round(34+state.grain*.65);
+        for(let i=0;i<amount;i++){
+          const x=seeded(i+2)*S,y=seeded(i+55)*S,len=(.018+seeded(i+9)*.15)*S,ang=(-1.05+seeded(i+91)*2.1);
+          c.strokeStyle=`rgba(255,255,255,${.035+seeded(i+7)*.11})`;
+          c.lineWidth=Math.max(.65,S*(.00045+seeded(i+13)*.00075));
+          c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);c.stroke();
+        }
+      }
+
+      c.globalCompositeOperation='multiply';
+      const edge=c.createRadialGradient(S*.5,S*.49,S*.34,S*.5,S*.49,S*.72);
+      edge.addColorStop(0,'rgba(0,0,0,0)');
+      edge.addColorStop(.72,'rgba(45,30,18,.05)');
+      edge.addColorStop(1,'rgba(32,20,11,.24)');
+      c.fillStyle=edge;c.fillRect(0,0,S,S);
     }
+    c.restore();
   }
 
   function drawNoise(c,S){

@@ -1,0 +1,43 @@
+name: Remove oval artifact
+on:
+  push:
+    paths:
+      - '.github/workflows/remove-oval-artifact.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Remove synthetic oval highlights
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old1="""      c.globalCompositeOperation='screen';\n      c.globalAlpha=.18+.28*strength;\n      c.fillStyle='rgba(255,255,255,.34)';\n      c.beginPath();c.ellipse(cx-r*.18,cy-r*.20,r*.72,r*.13,-.63,0,Math.PI*2);c.fill();\n"""
+          old2="""      c.globalCompositeOperation='screen';\n      c.globalAlpha=.10+.16*strength;\n      c.fillStyle=`rgba(${Math.min(255,rgb[0]+110)},${Math.min(255,rgb[1]+110)},${Math.min(255,rgb[2]+110)},.55)`;\n      c.beginPath();c.ellipse(cx-r*.20,cy-r*.24,r*.68,r*.12,-.58,0,Math.PI*2);c.fill();\n"""
+          if old1 not in s or old2 not in s:
+              raise SystemExit('Expected synthetic oval highlight code not found')
+          s=s.replace(old1,"""      // Keep iridescence as a uniform reflective film. Real specular\n      // highlights come from the photographed jewel-case template below.\n""")
+          s=s.replace(old2,"""      // Keep the lacquer uniform. Real specular highlights come from\n      // the photographed jewel-case template below, avoiding fake oval bands.\n""")
+          p.write_text(s)
+          PY
+      - name: Verify
+        run: |
+          ! grep -q "c\.ellipse(cx-r" index.html
+          grep -q "photographed jewel-case template below" index.html
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/remove-oval-artifact.yml
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/remove-oval-artifact.yml
+          git commit -m 'Remove oval disc artifact'
+          git pull --rebase origin main
+          git push origin main

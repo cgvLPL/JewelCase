@@ -705,13 +705,71 @@
     }
     c.restore();
 
+    // Optical construction layers: a real CD reads as several concentric
+    // materials rather than one flat tinted circle. These layers are subtle,
+    // circular and scale with the export size, so they stay realistic without
+    // introducing synthetic oval highlights.
+    c.save();
+    c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);c.clip('evenodd');
+
+    // Dark molded edge / thickness at the outer circumference.
+    c.globalCompositeOperation='multiply';
+    const edgeShade=c.createRadialGradient(cx,cy,r*.86,cx,cy,r);
+    edgeShade.addColorStop(0,'rgba(0,0,0,0)');
+    edgeShade.addColorStop(.78,'rgba(0,0,0,.018)');
+    edgeShade.addColorStop(.94,'rgba(0,0,0,.14)');
+    edgeShade.addColorStop(1,'rgba(0,0,0,.34)');
+    c.fillStyle=edgeShade;c.fillRect(cx-r,cy-r,r*2,r*2);
+
+    // Thin silver reflective data band just inside the printable edge.
+    c.globalCompositeOperation='screen';
+    c.lineWidth=Math.max(1,S*.00115);
+    c.strokeStyle='rgba(222,232,238,.22)';
+    circlePath(c,cx,cy,r*.982);c.stroke();
+    c.lineWidth=Math.max(.7,S*.00062);
+    c.strokeStyle='rgba(255,255,255,.19)';
+    circlePath(c,cx,cy,r*.968);c.stroke();
+
+    // Real CDs have a faint radial metallic / polycarbonate falloff.
+    const optical=c.createRadialGradient(cx,cy,hubProtectR*1.02,cx,cy,r);
+    optical.addColorStop(0,'rgba(210,220,226,.055)');
+    optical.addColorStop(.18,'rgba(255,255,255,.018)');
+    optical.addColorStop(.72,'rgba(154,178,193,.025)');
+    optical.addColorStop(.93,'rgba(232,242,248,.06)');
+    optical.addColorStop(1,'rgba(255,255,255,.11)');
+    c.globalCompositeOperation='screen';
+    c.fillStyle=optical;c.fillRect(cx-r,cy-r,r*2,r*2);
+
+    // Inner clear polycarbonate ring around the molded spindle.
+    c.lineWidth=Math.max(1.2,S*.00135);
+    c.strokeStyle='rgba(220,230,236,.16)';
+    circlePath(c,cx,cy,hubProtectR*1.055);c.stroke();
+    c.lineWidth=Math.max(.7,S*.00058);
+    c.strokeStyle='rgba(255,255,255,.10)';
+    circlePath(c,cx,cy,hubProtectR*1.105);c.stroke();
+
+    // Extremely subtle circular light rolloff: only radial gradients, never
+    // ellipses, so the surface gains depth without a fake highlight artifact.
+    const lightRoll=c.createRadialGradient(cx-r*.22,cy-r*.18,r*.07,cx,cy,r*.96);
+    lightRoll.addColorStop(0,'rgba(255,255,255,.055)');
+    lightRoll.addColorStop(.42,'rgba(255,255,255,.018)');
+    lightRoll.addColorStop(1,'rgba(255,255,255,0)');
+    c.globalCompositeOperation='screen';
+    c.fillStyle=lightRoll;c.fillRect(cx-r,cy-r,r*2,r*2);
+    c.restore();
+
     if(state.grooves){
       c.save();
       c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.arc(cx,cy,hubProtectR,0,Math.PI*2,true);c.clip('evenodd');
-      c.lineWidth=Math.max(.65,S*.00045);
-      for(let rr=hubR*1.12;rr<r*.985;rr+=S*.0075){
-        c.strokeStyle=`rgba(255,255,255,${.009+(rr%19)/3600})`;
+      c.lineWidth=Math.max(.45,S*.00030);
+      // Dense, faint concentric tracks read more like a pressed optical disc
+      // than widely-spaced decorative rings.
+      let track=0;
+      for(let rr=hubR*1.18;rr<r*.974;rr+=S*.0046){
+        const a=.0065+(track%7)*.00115;
+        c.strokeStyle=`rgba(235,245,250,${a})`;
         circlePath(c,cx,cy,rr);c.stroke();
+        track++;
       }
       c.restore();
     }
@@ -722,7 +780,9 @@
     if(templateImage.complete && templateImage.naturalWidth){
       c.save();
       c.globalCompositeOperation='screen';
-      c.globalAlpha=.18+(state.glare/100)*.42;
+      // Keep photographed plastic/specular detail present but restrained so
+      // artwork remains printed-looking instead of washed out.
+      c.globalAlpha=.14+(state.glare/100)*.30;
       c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
       c.drawImage(templateImage,0,0,S,S);
       c.restore();

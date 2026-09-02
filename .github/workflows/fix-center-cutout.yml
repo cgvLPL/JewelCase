@@ -1,0 +1,43 @@
+name: Fix center cutout
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-center-cutout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fix center artwork mask
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          old='const cx=S*.5030,cy=S*.4980,r=S*.3890,hubR=S*.0900,hubProtectR=S*.0520;'
+          new='const cx=S*.5030,cy=S*.4980,r=S*.3890,hubR=S*.0900,hubProtectR=S*.1120;'
+          assert old in s, 'expected geometry line not found'
+          s=s.replace(old,new,1)
+          s=s.replace('// Restore the photographed center hub at full opacity so the molded\n    // patent text and locking ring stay perfectly centered and legible.', '// Restore the entire photographed center assembly at full opacity.\n    // The larger circular mask prevents uploaded artwork from bleeding between\n    // the molded spokes/patent ring and creating a broken-looking center cutout.',1)
+          p.write_text(s)
+          PY
+          grep -Fq 'hubProtectR=S*.1120' index.html
+      - name: Commit fix
+        shell: bash
+        run: |
+          rm -f .github/workflows/fix-center-cutout.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Fix CD center artwork cutout'
+          git pull --rebase origin main
+          git push origin HEAD:main

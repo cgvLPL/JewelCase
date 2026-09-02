@@ -26,7 +26,6 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # Fix the real issue: center artwork masking, not only spindle overlay.
           s = re.sub(r'(hubProtectR\s*=\s*S\s*\*\s*)0\.\d+', r'\g<1>0.0520', s)
           s = s.replace('S*.1600', 'S*.0520')
           s = s.replace('S*.1500', 'S*.0520')
@@ -35,7 +34,6 @@ jobs:
           s = s.replace('S*.150', 'S*.0520')
           s = s.replace('S*.120', 'S*.0520')
 
-          # Smaller visible lock hub.
           replacements = {
             'const outerR=S*.0545;':'const outerR=S*.0430;',
             'const discHoleR=S*.0395;':'const discHoleR=S*.0280;',
@@ -50,8 +48,8 @@ jobs:
 
       - name: Verify patch
         run: |
-          grep -Eq 'outerR=S\*\.0430|outerR=S\*0\.0430' index.html || true
-          grep -Eq 'discHoleR=S\*\.0280|discHoleR=S\*0\.0280' index.html || true
+          grep -Eq 'outerR=S\\*\\.0430|outerR=S\\*0\\.0430' index.html || true
+          grep -Eq 'discHoleR=S\\*\\.0280|discHoleR=S\\*0\\.0280' index.html || true
           echo 'center mask patch completed'
 
       - name: Commit generated fix
@@ -64,4 +62,5 @@ jobs:
             exit 0
           fi
           git commit -m 'Fix center hole masking and reduce spindle cut'
-          git push
+          git pull --rebase origin main
+          git push origin HEAD:main

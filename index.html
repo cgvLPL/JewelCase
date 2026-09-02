@@ -271,7 +271,7 @@
   const ctx = canvas.getContext('2d');
   const templateImage = new Image();
   templateImage.decoding = 'async';
-  templateImage.src = 'assets/jewel-case-template-3000dpi.png';
+  templateImage.src = 'assets/jewel-case-template-3000dpi.png?v=supplied-reference-20260902';
   templateImage.onload = () => requestRender();
   const state = {
     image:null, zoom:1.05, rotation:0, brightness:100, contrast:108, saturation:100, motion:2,
@@ -635,8 +635,8 @@
   }
 
   function drawDisc(c,S){
-    // Geometry is calibrated to the supplied 1024px jewel-case photograph, centered on the photographed hub.
-    const cx=S*.4925,cy=S*.4960,r=S*.3855,hubR=S*.0710,hubProtectR=S*.0500;
+    // Geometry is calibrated to the supplied jewel-case reference, centered on its photographed hub.
+    const cx=S*.5083,cy=S*.4978,r=S*.3860,hubR=S*.0710,hubProtectR=S*.0500;
 
     if(state.image){
       c.save();
@@ -648,8 +648,8 @@
       // Overlay blending lets the real photographed disc keep its physical
       // highlights, shadows, scratches and translucent plastic while the
       // uploaded artwork appears printed into the disc surface.
-      c.globalCompositeOperation='overlay';
-      c.globalAlpha=.98;
+      c.globalCompositeOperation='source-over';
+      c.globalAlpha=.94;
       drawCoverImage(c,S,cx,cy,r*1.012);
       c.restore();
     }
@@ -697,9 +697,6 @@
       c.restore();
     }
 
-    // Replace the warped outer-ring manufacturing text from the photograph.
-    drawOuterRingText(c,S,cx,cy,r);
-
     // Restore the photographed center hub at full opacity so the molded
     // patent text and locking ring stay perfectly centered and legible.
     if(templateImage.complete && templateImage.naturalWidth){
@@ -714,12 +711,6 @@
       c.drawImage(templateImage,0,0,S,S);
       c.restore();
     }
-
-    // Redraw the small molded patent lettering as a true concentric arc.
-    drawCenteredHubText(c,S,cx,cy);
-
-    // Add a realistic jewel-case spindle lock above the molded hub ring.
-    drawCenterLockHub(c,S,cx,cy);
   }
 
   function seeded(seed){

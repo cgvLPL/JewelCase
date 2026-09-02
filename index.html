@@ -393,21 +393,21 @@
 
   function drawCenterLockHub(c,S,cx,cy){
     // Smaller realistic jewel-case spindle so it masks less artwork.
-    const outerR=S*.0610;
-    const discHoleR=S*.0465;
-    const coreR=S*.0245;
-    const petalOuter=S*.0445;
-    const petalInner=S*.0278;
+    const outerR=S*.0545;
+    const discHoleR=S*.0395;
+    const coreR=S*.0208;
+    const petalOuter=S*.0378;
+    const petalInner=S*.0238;
     const teeth=12;
-    const halfGap=.044;
-    const halfPetal=.102;
+    const halfGap=.040;
+    const halfPetal=.094;
 
     c.save();
 
     // Molded hub seat.
-    const seat=c.createRadialGradient(cx-S*.009,cy-S*.010,S*.003,cx,cy,outerR);
-    seat.addColorStop(0,'rgba(112,118,126,.56)');
-    seat.addColorStop(.30,'rgba(49,53,60,.70)');
+    const seat=c.createRadialGradient(cx-S*.008,cy-S*.009,S*.003,cx,cy,outerR);
+    seat.addColorStop(0,'rgba(112,118,126,.54)');
+    seat.addColorStop(.30,'rgba(49,53,60,.68)');
     seat.addColorStop(.68,'rgba(14,16,20,.95)');
     seat.addColorStop(1,'rgba(2,3,5,1)');
     c.fillStyle=seat;
@@ -415,18 +415,18 @@
     c.fill();
 
     // Outer molded lip.
-    c.lineWidth=Math.max(1,S*.00135);
-    c.strokeStyle='rgba(244,248,252,.34)';
+    c.lineWidth=Math.max(1,S*.00120);
+    c.strokeStyle='rgba(244,248,252,.32)';
     circlePath(c,cx,cy,outerR);
     c.stroke();
 
-    c.lineWidth=Math.max(.8,S*.00075);
-    c.strokeStyle='rgba(255,255,255,.15)';
+    c.lineWidth=Math.max(.7,S*.00068);
+    c.strokeStyle='rgba(255,255,255,.14)';
     circlePath(c,cx,cy,discHoleR*1.06);
     c.stroke();
 
     // Dark recess for the CD hole.
-    const recess=c.createRadialGradient(cx-S*.005,cy-S*.006,S*.002,cx,cy,discHoleR);
+    const recess=c.createRadialGradient(cx-S*.0045,cy-S*.0055,S*.002,cx,cy,discHoleR);
     recess.addColorStop(0,'rgba(10,11,14,.98)');
     recess.addColorStop(.72,'rgba(3,4,6,1)');
     recess.addColorStop(1,'rgba(0,0,1,1)');
@@ -462,58 +462,58 @@
 
       const gx=cx+Math.cos(a-Math.PI*.18)*petalOuter*.35;
       const gy=cy+Math.sin(a-Math.PI*.18)*petalOuter*.35;
-      const g=c.createRadialGradient(gx,gy,S*.0012,cx,cy,petalOuter*.95);
+      const g=c.createRadialGradient(gx,gy,S*.0010,cx,cy,petalOuter*.95);
       if(i%2===0){
-        g.addColorStop(0,'rgba(225,230,236,.84)');
-        g.addColorStop(.40,'rgba(117,124,133,.70)');
+        g.addColorStop(0,'rgba(225,230,236,.82)');
+        g.addColorStop(.40,'rgba(117,124,133,.68)');
       }else{
-        g.addColorStop(0,'rgba(176,183,192,.66)');
-        g.addColorStop(.40,'rgba(83,89,98,.70)');
+        g.addColorStop(0,'rgba(176,183,192,.64)');
+        g.addColorStop(.40,'rgba(83,89,98,.68)');
       }
       g.addColorStop(.80,'rgba(28,31,37,.96)');
       g.addColorStop(1,'rgba(6,7,10,1)');
       c.fillStyle=g;
       c.fill();
 
-      c.lineWidth=Math.max(.65,S*.00052);
-      c.strokeStyle='rgba(245,248,252,.30)';
+      c.lineWidth=Math.max(.58,S*.00046);
+      c.strokeStyle='rgba(245,248,252,.28)';
       c.stroke();
 
       // Radial slot between neighboring petals.
       c.beginPath();
       c.moveTo(
-        cx+Math.cos(a+halfPetal+.018)*petalInner*.96,
+        cx+Math.cos(a+halfPetal+.016)*petalInner*.96,
         cy+Math.sin(a+halfPetal+.018)*petalInner*.96
       );
       c.lineTo(
         cx+Math.cos(a+halfPetal+.018)*petalOuter*.98,
         cy+Math.sin(a+halfPetal+.018)*petalOuter*.98
       );
-      c.lineWidth=Math.max(.9,S*.00090);
+      c.lineWidth=Math.max(.8,S*.00078);
       c.strokeStyle='rgba(0,0,0,.88)';
       c.stroke();
     }
 
     // Central push-release core.
-    const core=c.createRadialGradient(cx-S*.006,cy-S*.006,S*.002,cx,cy,coreR);
-    core.addColorStop(0,'rgba(63,68,77,.95)');
+    const core=c.createRadialGradient(cx-S*.005,cy-S*.005,S*.0018,cx,cy,coreR);
+    core.addColorStop(0,'rgba(63,68,77,.94)');
     core.addColorStop(.42,'rgba(25,28,34,.98)');
     core.addColorStop(1,'rgba(2,3,5,1)');
     c.fillStyle=core;
     circlePath(c,cx,cy,coreR);
     c.fill();
 
-    c.lineWidth=Math.max(.9,S*.0010);
-    c.strokeStyle='rgba(248,250,252,.24)';
+    c.lineWidth=Math.max(.8,S*.00088);
+    c.strokeStyle='rgba(248,250,252,.22)';
     circlePath(c,cx,cy,coreR);
     c.stroke();
 
     // Smaller center depression.
     c.fillStyle='rgba(0,0,1,.90)';
-    circlePath(c,cx,cy,S*.0118);
+    circlePath(c,cx,cy,S*.0098);
     c.fill();
-    c.lineWidth=Math.max(.7,S*.00065);
-    c.strokeStyle='rgba(255,255,255,.12)';
+    c.lineWidth=Math.max(.6,S*.00055);
+    c.strokeStyle='rgba(255,255,255,.10)';
     circlePath(c,cx,cy,S*.0118);
     c.stroke();
 
@@ -521,7 +521,7 @@
     c.beginPath();
     c.arc(cx,cy,outerR*.93,Math.PI*1.04,Math.PI*1.72);
     c.lineWidth=Math.max(.9,S*.0010);
-    c.strokeStyle='rgba(255,255,255,.28)';
+    c.strokeStyle='rgba(255,255,255,.25)';
     c.stroke();
 
     c.beginPath();

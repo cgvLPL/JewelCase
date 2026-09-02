@@ -1,0 +1,51 @@
+name: Shrink center hole again
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/shrink-center-hole-again.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  shrink:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reduce center hole mask and hub
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          replacements={
+            'const outerR=S*.0430;':'const outerR=S*.0350;',
+            'const discHoleR=S*.0275;':'const discHoleR=S*.0210;',
+            'const coreR=S*.0135;':'const coreR=S*.0105;',
+            'const petalOuter=S*.0285;':'const petalOuter=S*.0220;',
+            'const petalInner=S*.0160;':'const petalInner=S*.0120;',
+            'hubProtectR=S*.1180':'hubProtectR=S*.0750',
+            'hubProtectR=S*.1600':'hubProtectR=S*.0750',
+          }
+          changed=False
+          for a,b in replacements.items():
+            if a in s:
+              s=s.replace(a,b)
+              changed=True
+          if not changed:
+            raise SystemExit('No matching center hole values found')
+          p.write_text(s)
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add index.html
+          git commit -m 'Reduce center hole size significantly' || exit 0
+          git push

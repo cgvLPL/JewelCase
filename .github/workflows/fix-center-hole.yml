@@ -1,0 +1,37 @@
+name: Fix center hole size
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-center-hole:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reduce center cut geometry
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          s=s.replace("hubR=S*.1260,hubProtectR=S*.1600", "hubR=S*.0950,hubProtectR=S*.1180")
+          s=s.replace("const outerR=S*.0545;", "const outerR=S*.0430;")
+          s=s.replace("const discHoleR=S*.0395;", "const discHoleR=S*.0275;")
+          s=s.replace("const coreR=S*.0208;", "const coreR=S*.0135;")
+          s=s.replace("const petalOuter=S*.0378;", "const petalOuter=S*.0285;")
+          s=s.replace("const petalInner=S*.0238;", "const petalInner=S*.0160;")
+          s=s.replace("circlePath(c,cx,cy,S*.0098);", "circlePath(c,cx,cy,S*.0068);")
+          s=s.replace("circlePath(c,cx,cy,S*.0118);", "circlePath(c,cx,cy,S*.0085);")
+          p.write_text(s)
+          PY
+      - name: Commit fix
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add index.html
+          git diff --cached --quiet || git commit -m "Reduce center spindle cut footprint"
+          git push

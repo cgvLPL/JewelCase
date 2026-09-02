@@ -1,9 +1,9 @@
-name: Apply exact 1024 jewel-case template
+name: Apply final supplied 1024 jewel-case template
 
 on:
   push:
     paths:
-      - '.github/apply-template-1024-webp.trigger'
+      - '.github/apply-template-final-q70.trigger'
   workflow_dispatch:
 
 permissions:
@@ -25,8 +25,9 @@ jobs:
       - name: Decode and verify supplied 1024 image
         shell: bash
         run: |
-          tr -d '\r\n ' < .github/template1024.webp.b64 | base64 --decode > /tmp/template-1024.webp
-          echo "7d6bd5cf395ca5c2a2aa021e2b57b7b9f0eab1dabb2b3f61f4fad3e108cee648  /tmp/template-1024.webp" | sha256sum -c -
+          cat .github/exact1024-q70.b64.* | tr -d '\r\n ' | base64 --decode > /tmp/template-1024.webp
+          test "$(stat -c%s /tmp/template-1024.webp)" = "66670"
+          echo "9379d1d178b557064dedd82c9b46370d99df0a59a698347d4a8334d77d38957c  /tmp/template-1024.webp" | sha256sum -c -
           python -m pip install --disable-pip-version-check pillow >/dev/null
           python - <<'PY'
           from PIL import Image
@@ -36,7 +37,7 @@ jobs:
           print('verified', im.format, im.size)
           PY
 
-      - name: Install supplied template and patch renderer
+      - name: Install template and patch renderer
         shell: bash
         run: |
           cp /tmp/template-1024.webp assets/jewel-case-template-1024.webp
@@ -49,7 +50,7 @@ jobs:
 
           s, n = re.subn(
               r"templateImage\.src\s*=\s*'[^']+';",
-              "templateImage.src = 'assets/jewel-case-template-1024.webp?v=7d6bd5cf395ca5c2';",
+              "templateImage.src = 'assets/jewel-case-template-1024.webp?v=9379d1d178b55706';",
               s,
               count=1,
           )
@@ -62,42 +63,45 @@ jobs:
               count=1,
           )
           assert n == 1, 'disc geometry line not found'
-
-          s = s.replace(
-              '// Geometry is calibrated to the supplied jewel-case reference, centered on its photographed hub.',
-              '// Geometry is calibrated to the 1024x1024 jewel-case image supplied on 2026-09-02.'
-          )
-          s = s.replace(
-              '// Geometry is calibrated to the exact 1024x1024 jewel-case template uploaded on 2026-09-02.',
-              '// Geometry is calibrated to the 1024x1024 jewel-case image supplied on 2026-09-02.'
-          )
           p.write_text(s)
           PY
 
-      - name: Remove stale template assets and staging files
+      - name: Remove old template assets and staging pipelines
         shell: bash
         run: |
           rm -f \
+            assets/jewel-case-template-3000dpi.png \
+            assets/jewel-case-template.png \
+            assets/jewel-case-template.avif \
             assets/jewel-case-template-source.jpg \
+            .github/template-1024.b64.* \
             .github/template1024.b64.00 \
             .github/template1024.webp.b64 \
+            .github/exact1024-q70.b64.* \
+            .github/apply-template-now.trigger \
+            .github/apply-template-1024.trigger \
             .github/apply-template-1024-webp.trigger \
-            .github/workflows/apply-exact-1024-template.yml
+            .github/apply-template-final-q70.trigger
+          find .github/workflows -maxdepth 1 -type f ! -name pages.yml -delete
 
       - name: Verify final repository state
         shell: bash
         run: |
-          test "$(stat -c%s assets/jewel-case-template-1024.webp)" = "137962"
-          echo "7d6bd5cf395ca5c2a2aa021e2b57b7b9f0eab1dabb2b3f61f4fad3e108cee648  assets/jewel-case-template-1024.webp" | sha256sum -c -
-          grep -Fq "templateImage.src = 'assets/jewel-case-template-1024.webp?v=7d6bd5cf395ca5c2';" index.html
+          test "$(stat -c%s assets/jewel-case-template-1024.webp)" = "66670"
+          echo "9379d1d178b557064dedd82c9b46370d99df0a59a698347d4a8334d77d38957c  assets/jewel-case-template-1024.webp" | sha256sum -c -
+          grep -Fq "templateImage.src = 'assets/jewel-case-template-1024.webp?v=9379d1d178b55706';" index.html
           grep -Fq 'const cx=S*.5030,cy=S*.4980,r=S*.3890,hubR=S*.0900,hubProtectR=S*.0520;' index.html
+          test ! -e assets/jewel-case-template-3000dpi.png
+          test ! -e assets/jewel-case-template.png
+          test ! -e assets/jewel-case-template.avif
+          test "$(find .github/workflows -maxdepth 1 -type f -printf '%f\n')" = "pages.yml"
 
-      - name: Commit supplied 1024 template
+      - name: Commit final template
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Install supplied 1024 jewel-case template'
+          git commit -m 'Install final supplied 1024 jewel-case template'
           git pull --rebase origin main
           git push origin HEAD:main

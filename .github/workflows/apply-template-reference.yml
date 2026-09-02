@@ -24,7 +24,7 @@ jobs:
 
       - name: Assemble reference image
         run: |
-          cat assets/reference-template-mini.b64.* | tr -d '\n\r ' | base64 --decode > assets/reference-template.jpg
+          cat assets/reference-template-550.b64.* | tr -d '\n\r ' | base64 --decode > assets/reference-template.jpg
           test -s assets/reference-template.jpg
 
       - name: Build template assets and recalibrate renderer
@@ -42,7 +42,7 @@ jobs:
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
           s, n = re.subn(
-              r'const cx=S\*\.\d+,cy=S\*\.\d+,r=S\*\.\d+,hubR=S\*\.\d+,hubProtectR=S\*\.\d+;',
+              r'const cx=S\*\.?\d+,cy=S\*\.?\d+,r=S\*\.?\d+,hubR=S\*\.?\d+,hubProtectR=S\*\.?\d+;',
               'const cx=S*.5067,cy=S*.4981,r=S*.3852,hubR=S*.0710,hubProtectR=S*.0520;',
               s,
               count=1,

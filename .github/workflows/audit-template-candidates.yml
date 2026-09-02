@@ -1,0 +1,48 @@
+name: Audit staged template candidates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/audit-template-candidates.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image hash tools
+        run: python -m pip install --disable-pip-version-check pillow imagehash
+      - name: Inspect candidate base64 sets
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import imagehash, base64, glob, io
+
+          target = imagehash.hex_to_hash('eaea9797589431b1')
+          patterns = [
+              'assets/reference-template-550.b64.*',
+              'assets/reference-template-mini.b64.*',
+              'assets/reference-template-good.b64.*',
+              'assets/reference-template.b64.*',
+          ]
+          for pattern in patterns:
+              files = sorted(glob.glob(pattern))
+              if not files:
+                  continue
+              raw = ''.join(Path(f).read_text().strip() for f in files)
+              print('CANDIDATE', pattern, 'parts=', len(files), 'b64chars=', len(raw))
+              try:
+                  data = base64.b64decode(raw, validate=True)
+                  im = Image.open(io.BytesIO(data)).convert('RGB')
+                  ph = imagehash.phash(im)
+                  print('  VALID', 'size=', im.size, 'bytes=', len(data), 'phash=', ph, 'distance=', ph-target)
+              except Exception as e:
+                  print('  INVALID', repr(e))
+          PY

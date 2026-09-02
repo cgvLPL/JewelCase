@@ -649,7 +649,9 @@
       // highlights, shadows, scratches and translucent plastic while the
       // uploaded artwork appears printed into the disc surface.
       c.globalCompositeOperation='source-over';
-      c.globalAlpha=.94;
+      // Slightly reveal the reflective substrate through the printed artwork.
+      // This keeps dark uploads from reading like a flat paper circle.
+      c.globalAlpha=.90;
       drawCoverImage(c,S,cx,cy,r*1.012);
       c.restore();
     }
@@ -756,6 +758,62 @@
     lightRoll.addColorStop(1,'rgba(255,255,255,0)');
     c.globalCompositeOperation='screen';
     c.fillStyle=lightRoll;c.fillRect(cx-r,cy-r,r*2,r*2);
+
+    // Edge refraction: a clear polycarbonate rim catches a thin bright lip on
+    // one side and a darker return edge opposite it. Using arcs keeps the CD
+    // perfectly circular while giving the edge believable physical thickness.
+    c.globalCompositeOperation='screen';
+    c.lineCap='round';
+    c.lineWidth=Math.max(1.1,S*.00115);
+    c.strokeStyle='rgba(255,255,255,.20)';
+    c.beginPath();c.arc(cx,cy,r*.992,-2.52,-.34);c.stroke();
+    c.lineWidth=Math.max(.8,S*.00072);
+    c.strokeStyle='rgba(165,205,230,.14)';
+    c.beginPath();c.arc(cx,cy,r*.978,.15,2.05);c.stroke();
+    c.globalCompositeOperation='multiply';
+    c.lineWidth=Math.max(1,S*.0010);
+    c.strokeStyle='rgba(0,0,0,.20)';
+    c.beginPath();c.arc(cx,cy,r*.994,.48,2.62);c.stroke();
+
+    // Faint diffraction bands. Real optical discs break white light into small
+    // spectral arcs rather than broad painted gradients. Keep these restrained.
+    if(state.discStyle!=='black'){
+      c.globalCompositeOperation='screen';
+      const diffraction=[
+        [r*.875,-2.72,-2.18,'rgba(255,76,108,.085)'],
+        [r*.882,-2.70,-2.13,'rgba(255,182,75,.070)'],
+        [r*.889,-2.68,-2.08,'rgba(102,240,196,.070)'],
+        [r*.896,-2.66,-2.03,'rgba(104,158,255,.085)'],
+        [r*.825,.42,.96,'rgba(102,236,255,.055)'],
+        [r*.833,.46,1.02,'rgba(181,114,255,.060)']
+      ];
+      c.lineWidth=Math.max(.65,S*.00062);
+      for(const [rr,a0,a1,col] of diffraction){
+        c.strokeStyle=col;c.beginPath();c.arc(cx,cy,rr,a0,a1);c.stroke();
+      }
+    }
+
+    // Matrix / mirror band around the hub, common on manufactured CDs.
+    c.globalCompositeOperation='screen';
+    c.lineWidth=Math.max(.65,S*.00058);
+    c.strokeStyle='rgba(235,243,247,.12)';
+    circlePath(c,cx,cy,hubProtectR*1.20);c.stroke();
+    c.strokeStyle='rgba(115,145,160,.10)';
+    circlePath(c,cx,cy,hubProtectR*1.245);c.stroke();
+
+    // A few hairline radial handling marks, deterministic so preview/export match.
+    c.globalCompositeOperation='screen';
+    for(let i=0;i<7;i++){
+      const a=-2.45+seeded(i+701)*4.8;
+      const inner=hubProtectR*(1.35+seeded(i+710)*.55);
+      const outer=r*(.78+seeded(i+720)*.18);
+      c.strokeStyle=`rgba(255,255,255,${.018+seeded(i+730)*.018})`;
+      c.lineWidth=Math.max(.35,S*.00022);
+      c.beginPath();
+      c.moveTo(cx+Math.cos(a)*inner,cy+Math.sin(a)*inner);
+      c.lineTo(cx+Math.cos(a+.006)*outer,cy+Math.sin(a+.006)*outer);
+      c.stroke();
+    }
     c.restore();
 
     if(state.grooves){
@@ -782,7 +840,7 @@
       c.globalCompositeOperation='screen';
       // Keep photographed plastic/specular detail present but restrained so
       // artwork remains printed-looking instead of washed out.
-      c.globalAlpha=.14+(state.glare/100)*.30;
+      c.globalAlpha=.12+(state.glare/100)*.27;
       c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
       c.drawImage(templateImage,0,0,S,S);
       c.restore();

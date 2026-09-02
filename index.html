@@ -271,7 +271,7 @@
   const ctx = canvas.getContext('2d');
   const templateImage = new Image();
   templateImage.decoding = 'async';
-  templateImage.src = 'assets/jewel-case-template-3000dpi.png?v=supplied-reference-20260902';
+  templateImage.src = 'assets/jewel-case-template-1024.webp?v=9379d1d178b55706';
   templateImage.onload = () => requestRender();
   const state = {
     image:null, zoom:1.05, rotation:0, brightness:100, contrast:108, saturation:100, motion:2,
@@ -636,7 +636,7 @@
 
   function drawDisc(c,S){
     // Geometry is calibrated to the supplied jewel-case reference, centered on its photographed hub.
-    const cx=S*.5083,cy=S*.4978,r=S*.3860,hubR=S*.0710,hubProtectR=S*.0500;
+    const cx=S*.5030,cy=S*.4980,r=S*.3890,hubR=S*.0900,hubProtectR=S*.0520;
 
     if(state.image){
       c.save();

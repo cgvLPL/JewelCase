@@ -692,20 +692,16 @@
       rainbow.addColorStop(.62,`rgba(73,255,207,${.15+.27*strength})`);
       rainbow.addColorStop(1,`rgba(255,219,88,${.17+.28*strength})`);
       c.fillStyle=rainbow;c.fillRect(cx-r,cy-r,r*2,r*2);
-      c.globalCompositeOperation='screen';
-      c.globalAlpha=.18+.28*strength;
-      c.fillStyle='rgba(255,255,255,.34)';
-      c.beginPath();c.ellipse(cx-r*.18,cy-r*.20,r*.72,r*.13,-.63,0,Math.PI*2);c.fill();
+      // Keep iridescence as a uniform reflective film. Real specular
+      // highlights come from the photographed jewel-case template below.
     } else {
       // Purple and pink get a saturated translucent lacquer rather than a
       // barely-visible soft-light wash.
       c.globalCompositeOperation='soft-light';
       c.fillStyle=`rgba(${rgb[0]},${rgb[1]},${rgb[2]},${.26+.50*strength})`;
       c.fillRect(cx-r,cy-r,r*2,r*2);
-      c.globalCompositeOperation='screen';
-      c.globalAlpha=.10+.16*strength;
-      c.fillStyle=`rgba(${Math.min(255,rgb[0]+110)},${Math.min(255,rgb[1]+110)},${Math.min(255,rgb[2]+110)},.55)`;
-      c.beginPath();c.ellipse(cx-r*.20,cy-r*.24,r*.68,r*.12,-.58,0,Math.PI*2);c.fill();
+      // Keep the lacquer uniform. Real specular highlights come from
+      // the photographed jewel-case template below, avoiding fake oval bands.
     }
     c.restore();
 

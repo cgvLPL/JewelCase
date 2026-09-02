@@ -636,7 +636,7 @@
 
   function drawDisc(c,S){
     // Geometry is calibrated to the supplied jewel-case reference, centered on its photographed hub.
-    const cx=S*.5030,cy=S*.4980,r=S*.3890,hubR=S*.0900,hubProtectR=S*.0520;
+    const cx=S*.5030,cy=S*.4980,r=S*.3890,hubR=S*.0900,hubProtectR=S*.1120;
 
     if(state.image){
       c.save();
@@ -697,8 +697,9 @@
       c.restore();
     }
 
-    // Restore the photographed center hub at full opacity so the molded
-    // patent text and locking ring stay perfectly centered and legible.
+    // Restore the entire photographed center assembly at full opacity.
+    // The larger circular mask prevents uploaded artwork from bleeding between
+    // the molded spokes/patent ring and creating a broken-looking center cutout.
     if(templateImage.complete && templateImage.naturalWidth){
       c.save();
       c.beginPath();

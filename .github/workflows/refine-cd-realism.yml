@@ -1,0 +1,67 @@
+name: Refine CD realism
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/refine-cd-realism.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refine optical disc rendering
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+
+          marker="""    c.globalCompositeOperation='screen';\n    c.fillStyle=lightRoll;c.fillRect(cx-r,cy-r,r*2,r*2);\n    c.restore();\n\n    if(state.grooves){\n"""
+          insert="""    c.globalCompositeOperation='screen';\n    c.fillStyle=lightRoll;c.fillRect(cx-r,cy-r,r*2,r*2);\n\n    // Edge refraction: a clear polycarbonate rim catches a thin bright lip on\n    // one side and a darker return edge opposite it. Using arcs keeps the CD\n    // perfectly circular while giving the edge believable physical thickness.\n    c.globalCompositeOperation='screen';\n    c.lineCap='round';\n    c.lineWidth=Math.max(1.1,S*.00115);\n    c.strokeStyle='rgba(255,255,255,.20)';\n    c.beginPath();c.arc(cx,cy,r*.992,-2.52,-.34);c.stroke();\n    c.lineWidth=Math.max(.8,S*.00072);\n    c.strokeStyle='rgba(165,205,230,.14)';\n    c.beginPath();c.arc(cx,cy,r*.978,.15,2.05);c.stroke();\n    c.globalCompositeOperation='multiply';\n    c.lineWidth=Math.max(1,S*.0010);\n    c.strokeStyle='rgba(0,0,0,.20)';\n    c.beginPath();c.arc(cx,cy,r*.994,.48,2.62);c.stroke();\n\n    // Faint diffraction bands. Real optical discs break white light into small\n    // spectral arcs rather than broad painted gradients. Keep these restrained.\n    if(state.discStyle!=='black'){\n      c.globalCompositeOperation='screen';\n      const diffraction=[\n        [r*.875,-2.72,-2.18,'rgba(255,76,108,.085)'],\n        [r*.882,-2.70,-2.13,'rgba(255,182,75,.070)'],\n        [r*.889,-2.68,-2.08,'rgba(102,240,196,.070)'],\n        [r*.896,-2.66,-2.03,'rgba(104,158,255,.085)'],\n        [r*.825,.42,.96,'rgba(102,236,255,.055)'],\n        [r*.833,.46,1.02,'rgba(181,114,255,.060)']\n      ];\n      c.lineWidth=Math.max(.65,S*.00062);\n      for(const [rr,a0,a1,col] of diffraction){\n        c.strokeStyle=col;c.beginPath();c.arc(cx,cy,rr,a0,a1);c.stroke();\n      }\n    }\n\n    // Matrix / mirror band around the hub, common on manufactured CDs.\n    c.globalCompositeOperation='screen';\n    c.lineWidth=Math.max(.65,S*.00058);\n    c.strokeStyle='rgba(235,243,247,.12)';\n    circlePath(c,cx,cy,hubProtectR*1.20);c.stroke();\n    c.strokeStyle='rgba(115,145,160,.10)';\n    circlePath(c,cx,cy,hubProtectR*1.245);c.stroke();\n\n    // A few hairline radial handling marks, deterministic so preview/export match.\n    c.globalCompositeOperation='screen';\n    for(let i=0;i<7;i++){\n      const a=-2.45+seeded(i+701)*4.8;\n      const inner=hubProtectR*(1.35+seeded(i+710)*.55);\n      const outer=r*(.78+seeded(i+720)*.18);\n      c.strokeStyle=`rgba(255,255,255,${.018+seeded(i+730)*.018})`;\n      c.lineWidth=Math.max(.35,S*.00022);\n      c.beginPath();\n      c.moveTo(cx+Math.cos(a)*inner,cy+Math.sin(a)*inner);\n      c.lineTo(cx+Math.cos(a+.006)*outer,cy+Math.sin(a+.006)*outer);\n      c.stroke();\n    }\n    c.restore();\n\n    if(state.grooves){\n"""
+          if marker not in s:
+              raise SystemExit('optical marker not found')
+          s=s.replace(marker,insert,1)
+
+          old="""      c.globalCompositeOperation='source-over';\n      c.globalAlpha=.94;\n      drawCoverImage(c,S,cx,cy,r*1.012);\n"""
+          new="""      c.globalCompositeOperation='source-over';\n      // Slightly reveal the reflective substrate through the printed artwork.\n      // This keeps dark uploads from reading like a flat paper circle.\n      c.globalAlpha=.90;\n      drawCoverImage(c,S,cx,cy,r*1.012);\n"""
+          if old not in s:
+              raise SystemExit('artwork alpha marker not found')
+          s=s.replace(old,new,1)
+
+          old2="""      c.globalAlpha=.14+(state.glare/100)*.30;\n"""
+          new2="""      c.globalAlpha=.12+(state.glare/100)*.27;\n"""
+          if old2 not in s:
+              raise SystemExit('glare alpha marker not found')
+          s=s.replace(old2,new2,1)
+
+          p.write_text(s)
+          PY
+
+      - name: Verify CD realism refinement
+        run: |
+          grep -Fq 'Edge refraction:' index.html
+          grep -Fq 'Faint diffraction bands.' index.html
+          grep -Fq 'Matrix / mirror band around the hub' index.html
+          grep -Fq 'c.globalAlpha=.90;' index.html
+          grep -Fq 'c.globalAlpha=.12+(state.glare/100)*.27;' index.html
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/refine-cd-realism.yml
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/refine-cd-realism.yml
+          git commit -m 'Refine CD optical realism'
+          git pull --rebase origin main
+          git push origin main

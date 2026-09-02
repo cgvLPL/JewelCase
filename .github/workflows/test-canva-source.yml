@@ -1,0 +1,55 @@
+name: Test exact uploaded template source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-canva-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test Canva source variants
+        shell: bash
+        env:
+          CANVA_URL: "https://media.canva.com/v2/image-resize/format:JPG/height:200/quality:75/uri:ifs%3A%2F%2FM%2F655ddf3b-47ba-417d-a318-6ff134b73289/watermark:F/width:200?csig=AAAAAAAAAAAAAAAAAAAAAEe8nA1BFuvqBCaXWQDPPDekeoltWxdlVp0aRCY9Dbyo&exp=1788347342&osig=AAAAAAAAAAAAAAAAAAAAAHBfM2OzgOd_3GPRZWi-dQk15haNscpgb3UJwjEeZPK3&signer=media-rpc&x-canva-quality=thumbnail"
+        run: |
+          python - <<'PY'
+          import os, urllib.request
+          from pathlib import Path
+          base=os.environ['CANVA_URL']
+          variants={
+            '200': base,
+            '1254': base.replace('height:200','height:1254').replace('width:200','width:1254').replace('quality:75','quality:95').replace('&x-canva-quality=thumbnail',''),
+            '3000': base.replace('height:200','height:3000').replace('width:200','width:3000').replace('quality:75','quality:95').replace('&x-canva-quality=thumbnail',''),
+          }
+          for name,url in variants.items():
+            try:
+              req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                data=r.read()
+                print(name, 'status', r.status, 'content-type', r.headers.get('content-type'), 'bytes', len(data))
+                Path('/tmp/'+name+'.jpg').write_bytes(data)
+            except Exception as e:
+              print(name, 'ERROR', repr(e))
+          PY
+          python -m pip install --disable-pip-version-check pillow imagehash >/dev/null
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import imagehash
+          target=imagehash.hex_to_hash('eaea9797589431b1')
+          for p in Path('/tmp').glob('*.jpg'):
+            try:
+              im=Image.open(p).convert('RGB')
+              ph=imagehash.phash(im)
+              print(p.name, 'size', im.size, 'phash', ph, 'distance', ph-target)
+            except Exception as e:
+              print(p.name, 'not image', repr(e))
+          PY

@@ -1,0 +1,155 @@
+name: Apply supplied jewel-case template final
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-supplied-template-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-supplied-template-final
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install image tooling
+        run: python -m pip install --disable-pip-version-check pillow pillow-avif-plugin imagehash
+
+      - name: Fetch and verify the exact supplied reference
+        shell: bash
+        env:
+          SOURCE_URL: "https://media.canva.com/v2/image-resize/format:JPG/height:200/quality:75/uri:ifs%3A%2F%2FM%2F655ddf3b-47ba-417d-a318-6ff134b73289/watermark:F/width:200?csig=AAAAAAAAAAAAAAAAAAAAAEe8nA1BFuvqBCaXWQDPPDekeoltWxdlVp0aRCY9Dbyo&exp=1788347342&osig=AAAAAAAAAAAAAAAAAAAAAHBfM2OzgOd_3GPRZWi-dQk15haNscpgb3UJwjEeZPK3&signer=media-rpc&x-canva-quality=thumbnail"
+        run: |
+          python - <<'PY'
+          import os, urllib.request
+          from pathlib import Path
+          from PIL import Image
+          import imagehash
+
+          req=urllib.request.Request(os.environ['SOURCE_URL'], headers={'User-Agent':'Mozilla/5.0'})
+          with urllib.request.urlopen(req, timeout=30) as r:
+              if r.status != 200:
+                  raise SystemExit(f'source request failed: HTTP {r.status}')
+              data=r.read()
+          p=Path('/tmp/supplied-jewelcase.jpg')
+          p.write_bytes(data)
+          im=Image.open(p).convert('RGB')
+          ph=imagehash.phash(im)
+          expected=imagehash.hex_to_hash('eaea9797589431b0')
+          print('source', im.size, 'bytes', len(data), 'phash', ph, 'distance', ph-expected)
+          if im.size != (200,200) or (ph-expected) > 2:
+              raise SystemExit('Downloaded source does not match the supplied reference image')
+          PY
+
+      - name: Replace template assets and renderer
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageEnhance
+          import pillow_avif
+          import re
+
+          src=Image.open('/tmp/supplied-jewelcase.jpg').convert('RGB')
+          assets=Path('assets')
+          assets.mkdir(exist_ok=True)
+
+          # Preserve the supplied composition exactly. The authenticated media
+          # endpoint exposes a 200px proxy, so generate clean high-resolution
+          # runtime assets from that verified source instead of reusing the old template.
+          standard=src.resize((1254,1254), Image.Resampling.LANCZOS)
+          standard.save(assets/'jewel-case-template.png','PNG',optimize=True)
+          standard.save(assets/'jewel-case-template.avif','AVIF',quality=92)
+          standard.save(assets/'jewel-case-template-source.jpg','JPEG',quality=96,optimize=True)
+          master=src.resize((3000,3000),Image.Resampling.LANCZOS)
+          master.save(assets/'jewel-case-template-3000dpi.png','PNG',optimize=True)
+
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+
+          s,n=re.subn(
+              r"templateImage\.src\s*=\s*['\"]assets/jewel-case-template-3000dpi\.png(?:\?[^'\"]*)?['\"];",
+              "templateImage.src = 'assets/jewel-case-template-3000dpi.png?v=supplied-reference-20260902';",
+              s,count=1)
+          if n != 1:
+              raise SystemExit('Could not update template image URL')
+
+          geometry='const cx=S*.5083,cy=S*.4978,r=S*.3860,hubR=S*.0710,hubProtectR=S*.0500;'
+          s,n=re.subn(
+              r'const\s+cx=S\*\.?\d+,cy=S\*\.?\d+,r=S\*\.?\d+,hubR=S\*\.?\d+,hubProtectR=S\*\.?\d+;',
+              geometry,s,count=1)
+          if n != 1:
+              raise SystemExit('Could not recalibrate disc geometry')
+
+          # Artwork must sit visibly on the disc; the photographic template is
+          # then screened back over it for the real acrylic highlights/rails.
+          s=s.replace("c.globalCompositeOperation='overlay';\n      c.globalAlpha=.98;",
+                      "c.globalCompositeOperation='source-over';\n      c.globalAlpha=.94;",1)
+
+          # The new photograph already has its real molded hub and ring details.
+          s=re.sub(r'\n\s*// Replace the warped outer-ring manufacturing text from the photograph\.\n\s*drawOuterRingText\(c,S,cx,cy,r\);','',s,count=1)
+          s=re.sub(r'\n\s*// Redraw the small molded patent lettering as a true concentric arc\.\n\s*drawCenteredHubText\(c,S,cx,cy\);','',s,count=1)
+          s=re.sub(r'\n\s*// Add a realistic jewel-case spindle lock above the molded hub ring\.\n\s*drawCenterLockHub\(c,S,cx,cy\);','',s,count=1)
+
+          s=s.replace('Geometry is calibrated to the supplied 1024px jewel-case photograph, centered on the photographed hub.',
+                      'Geometry is calibrated to the supplied jewel-case reference, centered on its photographed hub.')
+          p.write_text(s,encoding='utf-8')
+          PY
+
+      - name: Remove obsolete template pipelines and failed staging files
+        shell: bash
+        run: |
+          rm -f \
+            .github/workflows/apply-reference-template-v2.yml \
+            .github/workflows/apply-template-now.yml \
+            .github/workflows/apply-template-reference.yml \
+            .github/workflows/fix-center-hole-render.yml \
+            .github/workflows/fix-center-hole.yml \
+            .github/workflows/reduce-center-cut.yml \
+            .github/workflows/shrink-center-hole-again.yml \
+            .github/workflows/audit-template-candidates.yml \
+            .github/workflows/test-canva-source.yml \
+            assets/reference-template-550.b64.* \
+            assets/reference-template-mini.b64.* \
+            assets/reference-template-good.b64.* \
+            assets/reference-template.b64.* \
+            assets/reference-template.ready
+
+      - name: Verify the final state
+        shell: bash
+        run: |
+          test -s assets/jewel-case-template.png
+          test -s assets/jewel-case-template.avif
+          test -s assets/jewel-case-template-3000dpi.png
+          test -s assets/jewel-case-template-source.jpg
+          grep -Fq "templateImage.src = 'assets/jewel-case-template-3000dpi.png?v=supplied-reference-20260902';" index.html
+          grep -Fq 'const cx=S*.5083,cy=S*.4978,r=S*.3860,hubR=S*.0710,hubProtectR=S*.0500;' index.html
+          grep -Fq "c.globalCompositeOperation='source-over';" index.html
+          ! grep -Fq 'drawOuterRingText(c,S,cx,cy,r);' index.html
+          ! grep -Fq 'drawCenteredHubText(c,S,cx,cy);' index.html
+          ! grep -Fq 'drawCenterLockHub(c,S,cx,cy);' index.html
+
+      - name: Commit through GitHub Actions
+        shell: bash
+        run: |
+          # This is a one-shot migration. Remove itself so only the Pages deploy
+          # workflow remains authoritative after the template has been applied.
+          rm -f .github/workflows/apply-supplied-template-final.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Install supplied jewel-case template and remove stale pipelines'
+          git pull --rebase origin main
+          git push origin HEAD:main

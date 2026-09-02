@@ -24,6 +24,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Apply mobile-first UI
+        run: |
+          cp .github/mobile-ui-refresh.css mobile-ui.css
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text()
+          tag = '<link rel="stylesheet" href="mobile-ui.css?v=20260902">'
+          if tag not in s:
+              s = s.replace('</head>', '  ' + tag + '\n</head>', 1)
+              p.write_text(s)
+          PY
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:

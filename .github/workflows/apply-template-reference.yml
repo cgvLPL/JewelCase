@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'assets/reference-template.jpg'
+      - 'assets/reference-template.ready'
   workflow_dispatch:
 
 permissions:
@@ -21,6 +21,11 @@ jobs:
 
       - name: Install image tools
         run: python -m pip install --quiet pillow
+
+      - name: Assemble reference image
+        run: |
+          cat assets/reference-template.b64.* | tr -d '\n\r ' | base64 --decode > assets/reference-template.jpg
+          test -s assets/reference-template.jpg
 
       - name: Build template assets and recalibrate renderer
         run: |
@@ -46,8 +51,6 @@ jobs:
           if n != 1:
               raise SystemExit('Could not locate drawDisc geometry constants')
 
-          # The supplied reference already contains the physical spindle. Keep
-          # that photographed hub instead of drawing a second synthetic lock.
           s = re.sub(r'\n\s*// Redraw the small molded patent lettering as a true concentric arc\.\n\s*drawCenteredHubText\(c,S,cx,cy\);', '', s, count=1)
           s = re.sub(r'\n\s*// Add a realistic jewel-case spindle lock above the molded hub ring\.\n\s*drawCenterLockHub\(c,S,cx,cy\);', '', s, count=1)
 
@@ -64,7 +67,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html assets/jewel-case-template-3000dpi.png assets/jewel-case-template.png
+          git add index.html assets/jewel-case-template-3000dpi.png assets/jewel-case-template.png assets/reference-template.jpg
           if git diff --cached --quiet; then
             echo 'No generated changes to commit'
             exit 0

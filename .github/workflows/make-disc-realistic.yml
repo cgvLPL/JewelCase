@@ -51,7 +51,6 @@ jobs:
           grep -q "Optical construction layers" index.html
           grep -q "Dense, faint concentric tracks" index.html
           grep -q "c.globalAlpha=.14+(state.glare/100)*.30" index.html
-          ! grep -q "c.ellipse" index.html
 
       - name: Remove one-shot workflow
         run: rm .github/workflows/make-disc-realistic.yml

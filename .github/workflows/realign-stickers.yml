@@ -1,0 +1,57 @@
+name: Realign stickers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/realign-stickers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Realign labels to supplied jewel-case geometry
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          replacements={
+            "const x=S*.075,y=S*.835,w=S*.205,h=S*.095;":"const x=S*.772,y=S*.842,w=S*.178,h=S*.082;",
+            "const x=S*.075,y=S*.77,w=S*.19,h=S*.11;":"const x=S*.760,y=S*.720,w=S*.170,h=S*.098;",
+            "const x=S*.08,y=S*.67,w=S*.15,h=S*.075;":"const x=S*.790,y=S*.625,w=S*.138,h=S*.069;",
+            "const x=S*.49,y=S*.865,w=S*.39,h=S*.075;":"const x=S*.115,y=S*.865,w=S*.355,h=S*.070;"
+          }
+          for old,new in replacements.items():
+              if old not in s:
+                  raise SystemExit(f'missing sticker geometry: {old}')
+              s=s.replace(old,new,1)
+          p.write_text(s)
+          PY
+
+      - name: Verify sticker alignment
+        run: |
+          grep -Fq 'const x=S*.772,y=S*.842,w=S*.178,h=S*.082;' index.html
+          grep -Fq 'const x=S*.760,y=S*.720,w=S*.170,h=S*.098;' index.html
+          grep -Fq 'const x=S*.790,y=S*.625,w=S*.138,h=S*.069;' index.html
+          grep -Fq 'const x=S*.115,y=S*.865,w=S*.355,h=S*.070;' index.html
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/realign-stickers.yml
+
+      - name: Commit changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/realign-stickers.yml
+          git commit -m 'Realign jewel-case stickers'
+          git pull --rebase origin main
+          git push origin main

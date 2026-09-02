@@ -24,7 +24,7 @@ jobs:
 
       - name: Assemble reference image
         run: |
-          cat assets/reference-template.b64.* | tr -d '\n\r ' | base64 --decode > assets/reference-template.jpg
+          cat assets/reference-template-mini.b64.* | tr -d '\n\r ' | base64 --decode > assets/reference-template.jpg
           test -s assets/reference-template.jpg
 
       - name: Build template assets and recalibrate renderer
@@ -41,7 +41,6 @@ jobs:
 
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
-
           s, n = re.subn(
               r'const cx=S\*\.\d+,cy=S\*\.\d+,r=S\*\.\d+,hubR=S\*\.\d+,hubProtectR=S\*\.\d+;',
               'const cx=S*.5067,cy=S*.4981,r=S*.3852,hubR=S*.0710,hubProtectR=S*.0520;',
@@ -50,10 +49,8 @@ jobs:
           )
           if n != 1:
               raise SystemExit('Could not locate drawDisc geometry constants')
-
           s = re.sub(r'\n\s*// Redraw the small molded patent lettering as a true concentric arc\.\n\s*drawCenteredHubText\(c,S,cx,cy\);', '', s, count=1)
           s = re.sub(r'\n\s*// Add a realistic jewel-case spindle lock above the molded hub ring\.\n\s*drawCenterLockHub\(c,S,cx,cy\);', '', s, count=1)
-
           p.write_text(s, encoding='utf-8')
           PY
 

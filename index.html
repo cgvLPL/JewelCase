@@ -393,11 +393,11 @@
 
   function drawCenterLockHub(c,S,cx,cy){
     // Smaller realistic jewel-case spindle so it masks less artwork.
-    const outerR=S*.0545;
-    const discHoleR=S*.0395;
-    const coreR=S*.0208;
-    const petalOuter=S*.0378;
-    const petalInner=S*.0238;
+    const outerR=S*.0430;
+    const discHoleR=S*.0275;
+    const coreR=S*.0135;
+    const petalOuter=S*.0285;
+    const petalInner=S*.0160;
     const teeth=12;
     const halfGap=.040;
     const halfPetal=.094;
@@ -510,11 +510,11 @@
 
     // Smaller center depression.
     c.fillStyle='rgba(0,0,1,.90)';
-    circlePath(c,cx,cy,S*.0098);
+    circlePath(c,cx,cy,S*.0068);
     c.fill();
     c.lineWidth=Math.max(.6,S*.00055);
     c.strokeStyle='rgba(255,255,255,.10)';
-    circlePath(c,cx,cy,S*.0118);
+    circlePath(c,cx,cy,S*.0085);
     c.stroke();
 
     // Specular highlights on the molded plastic.
@@ -636,7 +636,7 @@
 
   function drawDisc(c,S){
     // Geometry is calibrated to the supplied 1024px jewel-case photograph, centered on the photographed hub.
-    const cx=S*.5100,cy=S*.4960,r=S*.4270,hubR=S*.1260,hubProtectR=S*.1600;
+    const cx=S*.5100,cy=S*.4960,r=S*.4270,hubR=S*.0950,hubProtectR=S*.1180;
 
     if(state.image){
       c.save();

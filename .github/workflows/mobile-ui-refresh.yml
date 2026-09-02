@@ -1,0 +1,101 @@
+name: Mobile UI refresh
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/mobile-ui-refresh.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply mobile-first UI inspired refresh
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+          marker='  </style>'
+          css=r'''
+    /* Mobile-first UI refresh: light, tactile, floating controls */
+    :root{--bg:#f5f5f3;--panel:rgba(255,255,255,.82);--panel2:#f1f1ef;--line:rgba(20,20,20,.09);--muted:#777773;--text:#111;--accent:#111;--accent2:#d9d9d5;--radius:24px}
+    html,body{background:#f5f5f3;color:var(--text)}
+    body{background:radial-gradient(circle at 50% -10%,#fff 0,#f6f6f4 42%,#efefec 100%)}
+    .app{grid-template-columns:minmax(0,1fr) 390px;gap:0}
+    header{height:78px;padding:0 28px;border-bottom:0;background:rgba(247,247,245,.78);backdrop-filter:blur(24px) saturate(1.25)}
+    .brand-logo{filter:none;width:220px;max-height:48px}
+    .btn{border:1px solid rgba(0,0,0,.08);background:rgba(255,255,255,.72);color:#111;border-radius:999px;padding:10px 16px;box-shadow:0 5px 18px rgba(0,0,0,.055);backdrop-filter:blur(14px)}
+    .btn:hover{transform:translateY(-1px);background:#fff;border-color:rgba(0,0,0,.13)}
+    .btn.primary{background:#111;border-color:#111;color:#fff;box-shadow:0 8px 22px rgba(0,0,0,.16)}
+    .stage-wrap{padding:28px 34px 38px}
+    .stage-shell{width:min(76vh,780px)}
+    canvas{background:#eee;border-radius:24px;box-shadow:0 28px 70px rgba(0,0,0,.12),0 0 0 1px rgba(0,0,0,.05)}
+    .hint{color:#777;font-weight:550}
+    aside{border-left:1px solid rgba(0,0,0,.07);background:rgba(249,249,247,.76);backdrop-filter:blur(26px) saturate(1.2)}
+    .side-head{padding:25px 22px 18px;border-bottom:0}
+    .side-head h1{font-size:26px;letter-spacing:-.055em}
+    .side-head p{color:#777;font-size:12px}
+    .section{margin:0 14px 12px;padding:18px;border:1px solid rgba(0,0,0,.065);border-radius:22px;background:rgba(255,255,255,.70);box-shadow:0 8px 26px rgba(0,0,0,.045);backdrop-filter:blur(18px)}
+    .section-title{font-size:11px;letter-spacing:.10em;color:#777;margin-bottom:12px}
+    .upload{min-height:106px;border:1px dashed rgba(0,0,0,.18);border-radius:18px;background:rgba(245,245,242,.8)}
+    .upload:hover,.upload.over{border-color:#111;background:#fff}
+    .upload span,.preset span,.value{color:#858581}
+    .presets{gap:7px}
+    .preset{border:1px solid rgba(0,0,0,.07);border-radius:15px;background:#f3f3f0;color:#111;padding:11px 12px;transition:.16s transform,.16s background,.16s box-shadow}
+    .preset:hover{transform:translateY(-1px);background:#fff;box-shadow:0 5px 15px rgba(0,0,0,.06)}
+    select,.text-input{background:#f4f4f1;border:1px solid rgba(0,0,0,.075);color:#111;border-radius:14px;padding:11px 12px}
+    select:focus,.text-input:focus{border-color:#111;background:#fff}
+    input[type="range"]{accent-color:#111}
+    .slider{background:#d5d5d1}
+    .switch input:checked+.slider{background:#111}
+    .switch input:checked+.slider:before{background:#fff}
+    .footer-actions{padding:4px 14px 22px}
+    .toast{background:#111;color:#fff;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+    @media(max-width:900px){
+      body{padding-bottom:92px}
+      .app{display:block}
+      header{height:70px;padding:0 16px;position:sticky;background:rgba(249,249,247,.84)}
+      .brand-logo{width:166px;max-width:48vw}
+      .top-actions .btn{padding:9px 12px}
+      .stage-wrap{padding:18px 14px 12px;min-height:auto}
+      .stage-shell{width:min(92vw,680px)}
+      canvas{border-radius:20px;box-shadow:0 18px 46px rgba(0,0,0,.11),0 0 0 1px rgba(0,0,0,.05)}
+      .hint{font-size:11px;padding:0 14px;line-height:1.45}
+      aside{position:relative;height:auto;border:0;background:transparent;backdrop-filter:none;padding-top:6px}
+      .side-head{padding:18px 18px 13px}
+      .side-head h1{font-size:28px}
+      .section{margin:0 12px 10px;padding:17px;border-radius:22px}
+      .footer-actions{position:sticky;bottom:10px;z-index:20;margin:0 12px 0;padding:9px;border:1px solid rgba(0,0,0,.07);border-radius:22px;background:rgba(245,245,242,.80);backdrop-filter:blur(24px) saturate(1.35);box-shadow:0 12px 34px rgba(0,0,0,.13)}
+      .footer-actions .btn{min-height:46px}
+    }
+    @media(max-width:520px){
+      header{height:66px;padding:0 12px}
+      .brand-logo{width:145px}
+      .top-actions{gap:5px}.top-actions .btn{font-size:11px;padding:8px 10px}
+      .stage-wrap{padding:12px 10px 8px}
+      .stage-shell{width:calc(100vw - 20px)}
+      .side-head{padding-left:15px}.side-head h1{font-size:25px}
+      .section{margin-left:8px;margin-right:8px;padding:15px;border-radius:20px}
+      .grid2{gap:7px}
+      .presets{grid-template-columns:1fr 1fr}
+      .footer-actions{margin-left:8px;margin-right:8px;bottom:8px}
+    }
+'''
+          if css.strip() not in s:
+              s=s.replace(marker,css+marker,1)
+          p.write_text(s)
+          PY
+      - name: Verify
+        run: grep -Fq 'Mobile-first UI refresh' index.html
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/mobile-ui-refresh.yml
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/mobile-ui-refresh.yml
+          git commit -m 'Refresh UI with mobile-first tactile design'
+          git pull --rebase origin main
+          git push origin main

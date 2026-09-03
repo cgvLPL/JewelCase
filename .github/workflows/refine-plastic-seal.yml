@@ -1,0 +1,29 @@
+name: Refine plastic seal realism
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - '.github/workflows/refine-plastic-seal.yml'
+      - '.github/scripts/refine_plastic_seal.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply plastic seal realism pass
+        run: python .github/scripts/refine_plastic_seal.py
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git diff --cached --quiet || git commit -m "Increase plastic seal realism"
+          git push

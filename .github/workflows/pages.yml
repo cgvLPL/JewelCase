@@ -24,22 +24,28 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Apply mobile-first UI and premium preview
+      - name: Apply mobile-first UI and feature surfaces
         run: |
           cp .github/mobile-ui-refresh.css mobile-ui.css
           python - <<'PY'
           from pathlib import Path
           p = Path('index.html')
           s = p.read_text()
-          mobile = '<link rel="stylesheet" href="mobile-ui.css?v=20260902">'
-          premium = '<link rel="stylesheet" href="assets/premium-preview.css?v=20260903">'
-          script = '<script src="assets/premium-preview.js?v=20260903" defer></script>'
-          if mobile not in s:
-              s = s.replace('</head>', '  ' + mobile + '\n</head>', 1)
-          if premium not in s:
-              s = s.replace('</head>', '  ' + premium + '\n</head>', 1)
-          if script not in s:
-              s = s.replace('</body>', '  ' + script + '\n</body>', 1)
+          tags = [
+              '<link rel="stylesheet" href="mobile-ui.css?v=20260902">',
+              '<link rel="stylesheet" href="assets/premium-preview.css?v=20260903b">',
+              '<link rel="stylesheet" href="assets/feature-ui.css?v=20260903">'
+          ]
+          scripts = [
+              '<script src="assets/feature-ui.js?v=20260903" defer></script>',
+              '<script src="assets/premium-preview.js?v=20260903b" defer></script>'
+          ]
+          for tag in tags:
+              if tag not in s:
+                  s = s.replace('</head>', '  ' + tag + '\n</head>', 1)
+          for script in scripts:
+              if script not in s:
+                  s = s.replace('</body>', '  ' + script + '\n</body>', 1)
           p.write_text(s)
           PY
 

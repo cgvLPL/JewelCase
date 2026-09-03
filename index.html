@@ -1038,7 +1038,7 @@
   }
 
   function drawBarcode(c,S){
-    const pos=state.stickerPos.barcode,x=S*(.745+pos.x),y=S*(.866+pos.y),w=S*.178,h=S*.070;
+    const pos=state.stickerPos.barcode,x=S*(.760+pos.x),y=S*(.835+pos.y),w=S*.165,h=S*.065;
     c.save();
     c.translate(x+w/2,y+h/2);c.rotate(.010);
     stickerShadow(c,S,.006,.28,.0035);
@@ -1413,7 +1413,7 @@
     title:{x:.090,y:.875,w:.330,h:.064,enabled:'titleSticker'},
     price:{x:.802,y:.677,w:.118,h:.060,enabled:'priceSticker'},
     advisory:{x:.748,y:.770,w:.160,h:.090,enabled:'advisory'},
-    barcode:{x:.745,y:.866,w:.178,h:.070,enabled:'barcode'}
+    barcode:{x:.760,y:.835,w:.165,h:.065,enabled:'barcode'}
   };
   function hitSticker(nx,ny){
     for(const key of ['barcode','advisory','price','title']){

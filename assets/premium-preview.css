@@ -9,6 +9,9 @@
 .stage-shell.preview-active::before{opacity:.78;transform:translateZ(-58px) scale(1.03)}
 .stage-shell.preview-dragging canvas{transition:none}
 .stage-shell.preview-dragging::after{opacity:.84}
+.stage-shell.premium-preview-off{perspective:none}
+.stage-shell.premium-preview-off canvas{transform:none!important}
+.stage-shell.premium-preview-off::before,.stage-shell.premium-preview-off::after{opacity:0!important}
 .preview-badge{position:absolute;left:14px;top:14px;z-index:4;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.30);border-radius:999px;background:rgba(18,18,18,.46);color:#fff;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;backdrop-filter:blur(14px) saturate(1.25);box-shadow:0 7px 20px rgba(0,0,0,.12);pointer-events:none}
 .preview-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.72)}
 @media(max-width:900px){.stage-shell::after{opacity:.50}.stage-shell::before{filter:blur(22px);opacity:.52}.preview-badge{left:10px;top:10px;padding:6px 9px;font-size:9px}}

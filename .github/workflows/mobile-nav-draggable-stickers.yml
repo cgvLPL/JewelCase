@@ -1,0 +1,109 @@
+name: Mobile navigation and draggable stickers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mobile-nav-draggable-stickers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply mobile navigation and draggable stickers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text()
+
+          # Section anchors for mobile nav.
+          anchors=[
+            ('<section class="section">\n      <div class="section-title">Source</div>', '<section class="section" id="sourceSection">\n      <div class="section-title">Source</div>'),
+            ('<section class="section">\n      <div class="section-title">Photo</div>', '<section class="section" id="photoSection">\n      <div class="section-title">Photo</div>'),
+            ('<section class="section">\n      <div class="section-title">Labels</div>', '<section class="section" id="labelsSection">\n      <div class="section-title">Labels</div>'),
+            ('<div class="footer-actions">', '<div class="footer-actions" id="exportSection">')
+          ]
+          for old,new in anchors:
+            if old in s and new not in s:
+              s=s.replace(old,new,1)
+
+          # Add draggable sticker hint.
+          hint='      <div class="section-title">Labels</div>'
+          if 'Drag enabled stickers directly on the preview' not in s:
+            s=s.replace(hint, hint+'\n      <div class="sticker-hint">Drag enabled stickers directly on the preview.</div>',1)
+
+          # Mobile navigation shell.
+          nav='''\n<nav class="mobile-tool-nav" aria-label="Editor navigation">\n  <button type="button" data-target="sourceSection"><span>＋</span>Upload</button>\n  <button type="button" data-target="photoSection"><span>⌁</span>Edit</button>\n  <button type="button" data-target="labelsSection"><span>▣</span>Labels</button>\n  <button type="button" data-target="exportSection"><span>⇧</span>Export</button>\n</nav>\n'''
+          if 'class="mobile-tool-nav"' not in s:
+            s=s.replace('<div class="toast" id="toast">Exported</div>', nav+'<div class="toast" id="toast">Exported</div>',1)
+
+          # UI styles.
+          css='''\n    .sticker-hint{margin:-5px 0 12px;color:var(--muted);font-size:11px;line-height:1.45}\n    .mobile-tool-nav{display:none}\n    @media(max-width:900px){\n      body{padding-bottom:94px}\n      .mobile-tool-nav{position:fixed;left:12px;right:12px;bottom:10px;z-index:60;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:7px;border:1px solid rgba(0,0,0,.08);border-radius:22px;background:rgba(246,246,243,.84);backdrop-filter:blur(24px) saturate(1.35);box-shadow:0 12px 34px rgba(0,0,0,.15)}\n      .mobile-tool-nav button{appearance:none;border:0;background:transparent;color:#111;border-radius:16px;min-height:54px;padding:6px 4px;font:700 10px/1.1 Inter,ui-sans-serif,system-ui;display:flex;flex-direction:column;gap:4px;align-items:center;justify-content:center;cursor:pointer}\n      .mobile-tool-nav button span{font-size:20px;line-height:1;font-weight:500}\n      .mobile-tool-nav button.active{background:#111;color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.14)}\n      .footer-actions{position:relative!important;bottom:auto!important;margin-bottom:12px!important}\n    }\n'''
+          if '.mobile-tool-nav{display:none}' not in s:
+            s=s.replace('  </style>',css+'  </style>',1)
+
+          # Sticker drag state.
+          old="    albumTitle:'', artistName:'', x:0, y:0\n  };"
+          new="    albumTitle:'', artistName:'', x:0, y:0,\n    stickerPos:{title:{x:0,y:0},price:{x:0,y:0},advisory:{x:0,y:0},barcode:{x:0,y:0}}\n  };"
+          if old in s:
+            s=s.replace(old,new,1)
+
+          # Geometry offsets in all sticker renderers.
+          replacements={
+            'const x=S*.790,y=S*.845,w=S*.160,h=S*.076;':"const pos=state.stickerPos.barcode,x=S*(.790+pos.x),y=S*(.845+pos.y),w=S*.160,h=S*.076;",
+            'const x=S*.786,y=S*.748,w=S*.152,h=S*.086;':"const pos=state.stickerPos.advisory,x=S*(.786+pos.x),y=S*(.748+pos.y),w=S*.152,h=S*.086;",
+            'const x=S*.815,y=S*.632,w=S*.120,h=S*.063;':"const pos=state.stickerPos.price,x=S*(.815+pos.x),y=S*(.632+pos.y),w=S*.120,h=S*.063;",
+            'const x=S*.105,y=S*.866,w=S*.340,h=S*.064;':"const pos=state.stickerPos.title,x=S*(.105+pos.x),y=S*(.866+pos.y),w=S*.340,h=S*.064;"
+          }
+          for old,new in replacements.items():
+            if old in s:
+              s=s.replace(old,new,1)
+
+          # Replace canvas dragging with sticker-aware dragging.
+          old_drag="""  let dragging=false,lastX=0,lastY=0;\n  canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging')});\n  canvas.addEventListener('pointermove',e=>{\n    if(!dragging)return;\n    const rect=canvas.getBoundingClientRect();\n    state.x+=(e.clientX-lastX)/rect.width;state.y+=(e.clientY-lastY)/rect.height;\n    lastX=e.clientX;lastY=e.clientY;requestRender();\n  });\n  canvas.addEventListener('pointerup',()=>{dragging=false;canvas.classList.remove('dragging')});\n  canvas.addEventListener('pointercancel',()=>{dragging=false;canvas.classList.remove('dragging')});"""
+          new_drag="""  const stickerBoxes={\n    title:{x:.105,y:.866,w:.340,h:.064,enabled:'titleSticker'},\n    price:{x:.815,y:.632,w:.120,h:.063,enabled:'priceSticker'},\n    advisory:{x:.786,y:.748,w:.152,h:.086,enabled:'advisory'},\n    barcode:{x:.790,y:.845,w:.160,h:.076,enabled:'barcode'}\n  };\n  function hitSticker(nx,ny){\n    for(const key of ['barcode','advisory','price','title']){\n      const b=stickerBoxes[key],p=state.stickerPos[key];\n      if(!state[b.enabled])continue;\n      const pad=.012;\n      if(nx>=b.x+p.x-pad && nx<=b.x+p.x+b.w+pad && ny>=b.y+p.y-pad && ny<=b.y+p.y+b.h+pad)return key;\n    }\n    return null;\n  }\n  let dragging=false,draggingSticker=null,lastX=0,lastY=0;\n  canvas.addEventListener('pointerdown',e=>{\n    const rect=canvas.getBoundingClientRect(),nx=(e.clientX-rect.left)/rect.width,ny=(e.clientY-rect.top)/rect.height;\n    draggingSticker=hitSticker(nx,ny);dragging=true;lastX=e.clientX;lastY=e.clientY;\n    canvas.setPointerCapture(e.pointerId);canvas.classList.add('dragging');\n  });\n  canvas.addEventListener('pointermove',e=>{\n    if(!dragging)return;\n    const rect=canvas.getBoundingClientRect(),dx=(e.clientX-lastX)/rect.width,dy=(e.clientY-lastY)/rect.height;\n    if(draggingSticker){\n      const p=state.stickerPos[draggingSticker];\n      p.x=Math.max(-.94,Math.min(.94,p.x+dx));p.y=Math.max(-.94,Math.min(.94,p.y+dy));\n    }else{\n      state.x+=dx;state.y+=dy;\n    }\n    lastX=e.clientX;lastY=e.clientY;requestRender();\n  });\n  function endCanvasDrag(){dragging=false;draggingSticker=null;canvas.classList.remove('dragging')}\n  canvas.addEventListener('pointerup',endCanvasDrag);\n  canvas.addEventListener('pointercancel',endCanvasDrag);"""
+          if old_drag not in s:
+            raise SystemExit('canvas drag block not found')
+          s=s.replace(old_drag,new_drag,1)
+
+          # Reset sticker positions too.
+          reset_old="albumTitle:'',artistName:'',x:0,y:0});"
+          reset_new="albumTitle:'',artistName:'',x:0,y:0,stickerPos:{title:{x:0,y:0},price:{x:0,y:0},advisory:{x:0,y:0},barcode:{x:0,y:0}}});"
+          if reset_old in s:
+            s=s.replace(reset_old,reset_new,1)
+
+          # Add mobile nav behavior before initial sync.
+          nav_js="""\n  const mobileNavButtons=[...document.querySelectorAll('.mobile-tool-nav button')];\n  mobileNavButtons.forEach(btn=>btn.addEventListener('click',()=>{\n    const target=$(btn.dataset.target);if(!target)return;\n    mobileNavButtons.forEach(b=>b.classList.toggle('active',b===btn));\n    target.scrollIntoView({behavior:'smooth',block:'start'});\n    if(btn.dataset.target==='sourceSection')setTimeout(()=>$('fileInput').click(),350);\n  }));\n  if(mobileNavButtons.length)mobileNavButtons[1].classList.add('active');\n\n"""
+          if 'const mobileNavButtons=' not in s:
+            s=s.replace('  syncState();requestRender();',nav_js+'  syncState();requestRender();',1)
+
+          p.write_text(s)
+          PY
+
+      - name: Verify upgrade
+        run: |
+          grep -Fq 'mobile-tool-nav' index.html
+          grep -Fq 'function hitSticker' index.html
+          grep -Fq 'state.stickerPos.barcode' index.html
+          grep -Fq 'Drag enabled stickers directly on the preview' index.html
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/mobile-nav-draggable-stickers.yml
+
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html .github/workflows/mobile-nav-draggable-stickers.yml
+          git commit -m 'Add mobile navigation and draggable stickers'
+          git pull --rebase origin main
+          git push origin main

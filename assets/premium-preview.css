@@ -1,0 +1,15 @@
+/* Premium live-preview presentation. These effects never affect exported artwork. */
+.stage-shell{perspective:1200px;transform-style:preserve-3d;--tilt-x:0deg;--tilt-y:0deg;--shine-x:50%;--shine-y:35%}
+.stage-shell canvas{transform:rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) translateZ(0);transform-origin:center;transition:transform .18s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease;will-change:transform,box-shadow}
+.stage-shell::after{content:"";position:absolute;inset:-2%;pointer-events:none;border-radius:28px;background:radial-gradient(circle at var(--shine-x) var(--shine-y),rgba(255,255,255,.20),rgba(255,255,255,.055) 18%,rgba(255,255,255,0) 46%);mix-blend-mode:screen;opacity:.68;filter:blur(.2px);transform:translateZ(24px);transition:opacity .22s ease}
+.stage-shell::before{content:"";position:absolute!important;display:block!important;padding:0!important;inset:8% 6% -7%!important;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.22),rgba(0,0,0,.07) 44%,transparent 72%);filter:blur(28px);transform:translateZ(-55px) scale(.96);pointer-events:none;opacity:.62;transition:opacity .22s ease,transform .22s ease}
+.stage-wrap{position:relative;isolation:isolate}
+.stage-wrap::after{content:"";position:absolute;width:min(72vw,760px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.58),rgba(255,255,255,.12) 42%,transparent 70%);filter:blur(40px);z-index:-1;pointer-events:none;opacity:.62}
+.stage-shell.preview-active canvas{box-shadow:0 34px 90px rgba(0,0,0,.18),0 10px 24px rgba(0,0,0,.10),0 0 0 1px rgba(255,255,255,.34)}
+.stage-shell.preview-active::before{opacity:.78;transform:translateZ(-58px) scale(1.03)}
+.stage-shell.preview-dragging canvas{transition:none}
+.stage-shell.preview-dragging::after{opacity:.84}
+.preview-badge{position:absolute;left:14px;top:14px;z-index:4;display:flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid rgba(255,255,255,.30);border-radius:999px;background:rgba(18,18,18,.46);color:#fff;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;backdrop-filter:blur(14px) saturate(1.25);box-shadow:0 7px 20px rgba(0,0,0,.12);pointer-events:none}
+.preview-badge::before{content:"";width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.72)}
+@media(max-width:900px){.stage-shell::after{opacity:.50}.stage-shell::before{filter:blur(22px);opacity:.52}.preview-badge{left:10px;top:10px;padding:6px 9px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.stage-shell canvas,.stage-shell::before,.stage-shell::after{transition:none!important;transform:none!important}}

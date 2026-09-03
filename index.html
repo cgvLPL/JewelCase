@@ -310,9 +310,11 @@
   const canvas = $('preview');
   const ctx = canvas.getContext('2d');
   const templateImage = new Image();
+  const templateSurface = document.createElement('canvas');
+  let templateSurfaceReady = false;
   templateImage.decoding = 'async';
   templateImage.src = 'assets/jewel-case-template-1024.webp?v=9379d1d178b55706';
-  templateImage.onload = () => requestRender();
+  templateImage.onload = () => { buildTemplateSurface(); requestRender(); };
   const state = {
     image:null, zoom:1.05, rotation:0, brightness:100, contrast:108, saturation:100, motion:2,
     discStyle:'clear', caseStyle:'template', discOpacity:10, glare:48, grain:12,
@@ -321,6 +323,85 @@
     albumTitle:'', artistName:'', x:0, y:0,
     stickerPos:{title:{x:0,y:0},price:{x:0,y:0},advisory:{x:0,y:0},barcode:{x:0,y:0}}
   };
+
+  function buildTemplateSurface(){
+    if(!templateImage.naturalWidth || !templateImage.naturalHeight)return;
+    const W=templateImage.naturalWidth,H=templateImage.naturalHeight;
+    templateSurface.width=W;templateSurface.height=H;
+    const tc=templateSurface.getContext('2d',{willReadFrequently:true});
+    tc.drawImage(templateImage,0,0,W,H);
+
+    // Keep the upper-right Compact Disc mark and remove the duplicate lower-left one.
+    // The small masked region is diffusion-filled from its surrounding photographed
+    // plastic, so rails, dust and reflections stay natural without painting a flat patch.
+    const image=tc.getImageData(0,0,W,H),d=image.data;
+    const x0=Math.round(W*.132),x1=Math.round(W*.226);
+    const y0=Math.round(H*.786),y1=Math.round(H*.855);
+    const rw=x1-x0+1,rh=y1-y0+1;
+    let mask=new Uint8Array(rw*rh);
+    const lum=(x,y)=>{
+      const i=(y*W+x)*4;
+      return d[i]*.2126+d[i+1]*.7152+d[i+2]*.0722;
+    };
+    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+      if(lum(x,y)>34)mask[(y-y0)*rw+(x-x0)]=1;
+    }
+    // Dilate to catch antialiasing and the printed outline.
+    for(let pass=0;pass<3;pass++){
+      const next=mask.slice();
+      for(let yy=0;yy<rh;yy++)for(let xx=0;xx<rw;xx++){
+        if(!mask[yy*rw+xx])continue;
+        for(let oy=-1;oy<=1;oy++)for(let ox=-1;ox<=1;ox++){
+          const nx=xx+ox,ny=yy+oy;
+          if(nx>=0&&nx<rw&&ny>=0&&ny<rh)next[ny*rw+nx]=1;
+        }
+      }
+      mask=next;
+    }
+
+    // Seed masked pixels with a dark local estimate, then relax them from the
+    // unmasked photographic boundary for a content-aware-looking fill.
+    let buf=new Float32Array(rw*rh*3);
+    for(let yy=0;yy<rh;yy++)for(let xx=0;xx<rw;xx++){
+      const x=x0+xx,y=y0+yy,si=(y*W+x)*4,bi=(yy*rw+xx)*3;
+      buf[bi]=d[si];buf[bi+1]=d[si+1];buf[bi+2]=d[si+2];
+      if(mask[yy*rw+xx]){
+        let sr=0,sg=0,sb=0,n=0;
+        for(const [sx,sy] of [[x0-3,y],[x1+3,y],[x,y0-3],[x,y1+3]]){
+          const cx=Math.max(0,Math.min(W-1,sx)),cy=Math.max(0,Math.min(H-1,sy)),ii=(cy*W+cx)*4;
+          sr+=d[ii];sg+=d[ii+1];sb+=d[ii+2];n++;
+        }
+        buf[bi]=sr/n;buf[bi+1]=sg/n;buf[bi+2]=sb/n;
+      }
+    }
+    for(let iter=0;iter<34;iter++){
+      const next=buf.slice();
+      for(let yy=0;yy<rh;yy++)for(let xx=0;xx<rw;xx++){
+        if(!mask[yy*rw+xx])continue;
+        let sr=0,sg=0,sb=0,n=0;
+        for(const [ox,oy] of [[-1,0],[1,0],[0,-1],[0,1]]){
+          const nx=xx+ox,ny=yy+oy;
+          if(nx<0||nx>=rw||ny<0||ny>=rh)continue;
+          const ni=(ny*rw+nx)*3;
+          sr+=buf[ni];sg+=buf[ni+1];sb+=buf[ni+2];n++;
+        }
+        const bi=(yy*rw+xx)*3;
+        if(n){next[bi]=sr/n;next[bi+1]=sg/n;next[bi+2]=sb/n;}
+      }
+      buf=next;
+    }
+    for(let yy=0;yy<rh;yy++)for(let xx=0;xx<rw;xx++){
+      if(!mask[yy*rw+xx])continue;
+      const x=x0+xx,y=y0+yy,di=(y*W+x)*4,bi=(yy*rw+xx)*3;
+      d[di]=Math.max(0,Math.min(255,buf[bi]));
+      d[di+1]=Math.max(0,Math.min(255,buf[bi+1]));
+      d[di+2]=Math.max(0,Math.min(255,buf[bi+2]));
+    }
+    tc.putImageData(image,0,0);
+    templateSurfaceReady=true;
+  }
+
+  function templateSource(){return templateSurfaceReady?templateSurface:templateImage;}
 
   const controls = [
     'zoom','rotation','brightness','contrast','saturation','motion','discStyle','caseStyle','discOpacity','glare','grain',
@@ -670,7 +751,7 @@
       c.save();
       c.imageSmoothingEnabled=true;
       c.imageSmoothingQuality='high';
-      c.drawImage(templateImage,0,0,S,S);
+      c.drawImage(templateSource(),0,0,S,S);
       c.restore();
     } else {
       const bg=c.createRadialGradient(S*.5,S*.49,S*.12,S*.5,S*.49,S*.72);
@@ -887,7 +968,7 @@
       // artwork remains printed-looking instead of washed out.
       c.globalAlpha=.12+(state.glare/100)*.27;
       c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
-      c.drawImage(templateImage,0,0,S,S);
+      c.drawImage(templateSource(),0,0,S,S);
       c.restore();
     }
 
@@ -903,7 +984,7 @@
       c.globalAlpha=1;
       c.imageSmoothingEnabled=true;
       c.imageSmoothingQuality='high';
-      c.drawImage(templateImage,0,0,S,S);
+      c.drawImage(templateSource(),0,0,S,S);
       c.restore();
     }
   }
@@ -931,7 +1012,7 @@
         c.filter='brightness(1.14) contrast(.90) saturate(.82)';
         c.globalCompositeOperation='screen';
         c.globalAlpha=.34;
-        c.drawImage(templateImage,0,0,S,S);
+        c.drawImage(templateSource(),0,0,S,S);
         c.restore();
       }
       c.globalCompositeOperation='screen';
@@ -1001,7 +1082,7 @@
       c.beginPath();c.moveTo(x,y);c.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);c.stroke();
     }
     if(templateImage.complete&&templateImage.naturalWidth){
-      c.globalCompositeOperation='screen';c.globalAlpha=.05+(state.glare/100)*.07;c.drawImage(templateImage,0,0,S,S);
+      c.globalCompositeOperation='screen';c.globalAlpha=.05+(state.glare/100)*.07;c.drawImage(templateSource(),0,0,S,S);
     }
     c.restore();
   }

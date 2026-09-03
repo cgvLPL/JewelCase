@@ -32,13 +32,13 @@ jobs:
           p = Path('index.html')
           s = p.read_text()
           tags = [
-              '<link rel="stylesheet" href="mobile-ui.css?v=20260902">',
-              '<link rel="stylesheet" href="assets/premium-preview.css?v=20260903b">',
-              '<link rel="stylesheet" href="assets/feature-ui.css?v=20260903">'
+              '<link rel="stylesheet" href="mobile-ui.css?v=20260903-0918">',
+              '<link rel="stylesheet" href="assets/premium-preview.css?v=20260903-0918">',
+              '<link rel="stylesheet" href="assets/feature-ui.css?v=20260903-0918">'
           ]
           scripts = [
-              '<script src="assets/feature-ui.js?v=20260903" defer></script>',
-              '<script src="assets/premium-preview.js?v=20260903b" defer></script>'
+              '<script src="assets/feature-ui.js?v=20260903-0918" defer></script>',
+              '<script src="assets/premium-preview.js?v=20260903-0918" defer></script>'
           ]
           for tag in tags:
               if tag not in s:

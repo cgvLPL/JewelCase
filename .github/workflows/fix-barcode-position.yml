@@ -25,3 +25,4 @@ jobs:
           git add index.html
           git commit -m "Fix barcode sticker placement"
           git push
+# trigger

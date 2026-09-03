@@ -43,7 +43,38 @@
     const labelsBtn=nav.querySelector('[data-target="labelsSection"]');
     const b=document.createElement('button');b.type='button';b.dataset.target='effectsSection';b.innerHTML='<span>✦</span>Effects';
     if(labelsBtn)nav.insertBefore(b,labelsBtn);else nav.appendChild(b);
-    b.addEventListener('click',()=>{[...nav.querySelectorAll('button')].forEach(x=>x.classList.toggle('active',x===b));effects?.scrollIntoView({behavior:'smooth',block:'start'});});
+  }
+
+  const navButtons=nav?[...nav.querySelectorAll('button[data-target]')]:[];
+  function activateNav(button){navButtons.forEach(x=>x.classList.toggle('active',x===button));}
+  navButtons.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const target=$(btn.dataset.target);if(!target)return;
+      activateNav(btn);
+      target.scrollIntoView({behavior:'smooth',block:'start'});
+      if(btn.dataset.target==='sourceSection')setTimeout(()=>$('fileInput')?.click(),320);
+    });
+  });
+
+  if(navButtons.length&&'IntersectionObserver' in window){
+    const targets=navButtons.map(b=>$(b.dataset.target)).filter(Boolean);
+    const observer=new IntersectionObserver(entries=>{
+      const visible=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+      if(!visible)return;
+      const btn=navButtons.find(b=>b.dataset.target===visible.target.id);
+      if(btn)activateNav(btn);
+    },{rootMargin:'-18% 0px -62% 0px',threshold:[0,.15,.35,.6]});
+    targets.forEach(t=>observer.observe(t));
+  }
+
+  if(window.matchMedia('(max-width: 900px)').matches){
+    document.querySelectorAll('aside .section').forEach(section=>{
+      if(section.querySelector('.back-to-preview'))return;
+      const button=document.createElement('button');
+      button.type='button';button.className='back-to-preview';button.innerHTML='↑ Preview';
+      button.addEventListener('click',()=>document.querySelector('.stage-wrap')?.scrollIntoView({behavior:'smooth',block:'start'}));
+      section.appendChild(button);
+    });
   }
 
   function syncCards(){document.querySelectorAll('[data-feature-card]').forEach(card=>{const el=$(card.dataset.featureCard);card.classList.toggle('is-on',!!el?.checked);});}

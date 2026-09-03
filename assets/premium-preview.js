@@ -10,8 +10,9 @@
     shell.appendChild(badge);
   }
   const motionOK=!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const enabled=()=>document.getElementById('premiumPreview')?.checked!==false;
   function tilt(x,y){
-    if(!motionOK)return;
+    if(!motionOK||!enabled())return;
     const r=shell.getBoundingClientRect();
     const nx=Math.max(0,Math.min(1,(x-r.left)/r.width));
     const ny=Math.max(0,Math.min(1,(y-r.top)/r.height));
@@ -28,10 +29,18 @@
     shell.style.setProperty('--shine-y','35%');
     shell.classList.remove('preview-active','preview-dragging');
   }
+  function syncToggle(){
+    const on=enabled();
+    shell.classList.toggle('premium-preview-off',!on);
+    const badge=shell.querySelector('.preview-badge');if(badge)badge.style.display=on?'':'none';
+    if(!on)reset();
+  }
   shell.addEventListener('pointerenter',e=>tilt(e.clientX,e.clientY));
   shell.addEventListener('pointermove',e=>tilt(e.clientX,e.clientY));
   shell.addEventListener('pointerleave',reset);
-  shell.addEventListener('pointerdown',()=>shell.classList.add('preview-dragging'));
+  shell.addEventListener('pointerdown',()=>{if(enabled())shell.classList.add('preview-dragging')});
   shell.addEventListener('pointerup',()=>shell.classList.remove('preview-dragging'));
   shell.addEventListener('pointercancel',()=>shell.classList.remove('preview-dragging'));
+  document.addEventListener('change',e=>{if(e.target?.id==='premiumPreview')syncToggle()});
+  setTimeout(syncToggle,0);
 })();

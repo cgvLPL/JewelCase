@@ -1,0 +1,33 @@
+name: Increase jewel case realism
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - '.github/workflows/increase-case-realism.yml'
+      - '.github/scripts/increase_case_realism.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Apply case realism pass
+        run: python .github/scripts/increase_case_realism.py
+      - name: Commit realism update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          if git diff --cached --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+          git commit -m "Increase jewel case realism"
+          git push

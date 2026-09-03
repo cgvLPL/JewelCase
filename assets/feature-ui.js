@@ -1,5 +1,12 @@
 (() => {
   const $=id=>document.getElementById(id);
+
+  const brandLogo=document.querySelector('.brand-logo');
+  if(brandLogo){
+    brandLogo.src='assets/jewelcase-logotype.svg?v=20260903-1500';
+    brandLogo.alt='JewelCase';
+  }
+
   const effects=$('effectsSection');
   if(effects){
     effects.querySelector('.section-title').textContent='Physical effects';

@@ -1,0 +1,32 @@
+name: Refine CD realism v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/refine-cd-realism-v2.yml'
+      - '.github/scripts/refine_cd_realism_v2.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Apply CD realism v2 patch
+        run: python .github/scripts/refine_cd_realism_v2.py
+      - name: Commit renderer update
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Refine CD optical realism v2"
+          git push
